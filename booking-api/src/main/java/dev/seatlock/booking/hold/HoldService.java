@@ -55,4 +55,9 @@ public class HoldService {
 		return holds.findHold(id).orElseThrow(() -> new NotFoundException("Hold " + id + " not found"));
 	}
 
+	/** Expires every ACTIVE hold past its expiry and frees its seats; returns how many holds expired. */
+	public int releaseExpired() {
+		return holds.expireHolds(clock.instant());
+	}
+
 }

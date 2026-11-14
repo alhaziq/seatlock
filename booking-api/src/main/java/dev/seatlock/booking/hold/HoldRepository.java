@@ -45,6 +45,21 @@ class HoldRepository {
 				.param("holdId", holdId).param("seatIds", seatIds).update();
 	}
 
+	/** One statement, so a hold and its seats expire together; a concurrent sweep skips rows already taken. */
+	int expireHolds(Instant now) {
+		return jdbc.sql("""
+				with expired as (
+				    update holds set status = 'EXPIRED'
+				     where status = 'ACTIVE' and expires_at <= ?
+				 returning id
+				), released as (
+				    update seats set status = 'AVAILABLE', hold_id = null
+				     where hold_id in (select id from expired)
+				)
+				select count(*) from expired""")
+				.param(utc(now)).query(Integer.class).single();
+	}
+
 	Optional<Hold> findHold(UUID id) {
 		List<UUID> seatIds = jdbc.sql("select id from seats where hold_id = ? order by label::int")
 				.param(id).query(UUID.class).list();
