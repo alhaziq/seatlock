@@ -40,12 +40,17 @@ class HoldRepository {
 				.params(id, eventId, userId, utc(expiresAt), utc(createdAt)).update();
 	}
 
-	void markSeatsHeld(UUID holdId, List<UUID> seatIds) {
-		jdbc.sql("update seats set status = 'HELD', hold_id = :holdId where id in (:seatIds)")
+	int markSeatsHeld(UUID holdId, List<UUID> seatIds) {
+		return jdbc.sql("""
+				update seats set status = 'HELD', hold_id = :holdId
+				 where id in (:seatIds) and status = 'AVAILABLE'""")
 				.param("holdId", holdId).param("seatIds", seatIds).update();
 	}
 
-	/** One statement, so a hold and its seats expire together; a concurrent sweep skips rows already taken. */
+	/**
+	 * One statement, so a hold and its seats expire together; a concurrent sweep waits for the other
+	 * transaction, then re-checks status = 'ACTIVE' and leaves rows already expired alone.
+	 */
 	int expireHolds(Instant now) {
 		return jdbc.sql("""
 				with expired as (

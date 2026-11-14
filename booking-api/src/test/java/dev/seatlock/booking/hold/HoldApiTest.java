@@ -1,5 +1,6 @@
 package dev.seatlock.booking.hold;
 
+import static dev.seatlock.booking.ProblemJson.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Clock;
@@ -85,7 +86,7 @@ class HoldApiTest {
 		List<UUID> seats = seatIds(event);
 		assertThat(status(hold(event.id(), UUID.randomUUID(), List.of(seats.get(0))))).isEqualTo(HttpStatus.CREATED);
 
-		assertThat(status(hold(event.id(), UUID.randomUUID(), seats.subList(0, 2)))).isEqualTo(HttpStatus.CONFLICT);
+		assertProblem(hold(event.id(), UUID.randomUUID(), seats.subList(0, 2)), HttpStatus.CONFLICT);
 		assertThat(statuses(event).get(1)).isEqualTo(SeatStatus.AVAILABLE);
 	}
 
@@ -94,20 +95,20 @@ class HoldApiTest {
 		Event event = event(3);
 		UUID s1 = seatIds(event).get(0);
 
-		assertThat(status(hold(event.id(), UUID.randomUUID(), List.of(s1, s1)))).isEqualTo(HttpStatus.BAD_REQUEST);
+		assertProblem(hold(event.id(), UUID.randomUUID(), List.of(s1, s1)), HttpStatus.BAD_REQUEST);
 		assertThat(statuses(event).get(0)).isEqualTo(SeatStatus.AVAILABLE);
 	}
 
 	@Test
 	void emptySeatIdsAre400() {
 		Event event = event(3);
-		assertThat(status(hold(event.id(), UUID.randomUUID(), List.of()))).isEqualTo(HttpStatus.BAD_REQUEST);
+		assertProblem(hold(event.id(), UUID.randomUUID(), List.of()), HttpStatus.BAD_REQUEST);
 	}
 
 	@Test
 	void moreThanSixSeatsIs400() {
 		Event event = event(7);
-		assertThat(status(hold(event.id(), UUID.randomUUID(), seatIds(event)))).isEqualTo(HttpStatus.BAD_REQUEST);
+		assertProblem(hold(event.id(), UUID.randomUUID(), seatIds(event)), HttpStatus.BAD_REQUEST);
 		assertThat(statuses(event)).containsOnly(SeatStatus.AVAILABLE);
 	}
 
@@ -117,15 +118,14 @@ class HoldApiTest {
 		Event second = event(3);
 		List<UUID> wanted = List.of(seatIds(first).get(0), seatIds(second).get(0));
 
-		assertThat(status(hold(first.id(), UUID.randomUUID(), wanted))).isEqualTo(HttpStatus.CONFLICT);
+		assertProblem(hold(first.id(), UUID.randomUUID(), wanted), HttpStatus.CONFLICT);
 		assertThat(statuses(first)).containsOnly(SeatStatus.AVAILABLE);
 		assertThat(statuses(second)).containsOnly(SeatStatus.AVAILABLE);
 	}
 
 	@Test
 	void unknownEventIs404() {
-		assertThat(status(hold(UUID.randomUUID(), UUID.randomUUID(), List.of(UUID.randomUUID()))))
-				.isEqualTo(HttpStatus.NOT_FOUND);
+		assertProblem(hold(UUID.randomUUID(), UUID.randomUUID(), List.of(UUID.randomUUID())), HttpStatus.NOT_FOUND);
 	}
 
 	@Test
@@ -137,8 +137,8 @@ class HoldApiTest {
 				.header("X-User-Id", "not-a-uuid")
 				.body(Map.of("seatIds", List.of(seatIds(event).get(0)))).retrieve();
 
-		assertThat(status(missing)).isEqualTo(HttpStatus.BAD_REQUEST);
-		assertThat(status(malformed)).isEqualTo(HttpStatus.BAD_REQUEST);
+		assertProblem(missing, HttpStatus.BAD_REQUEST);
+		assertProblem(malformed, HttpStatus.BAD_REQUEST);
 		assertThat(statuses(event)).containsOnly(SeatStatus.AVAILABLE);
 	}
 
@@ -161,8 +161,7 @@ class HoldApiTest {
 
 	@Test
 	void unknownHoldIs404() {
-		assertThat(status(client().get().uri("/holds/{id}", UUID.randomUUID()).retrieve()))
-				.isEqualTo(HttpStatus.NOT_FOUND);
+		assertProblem(client().get().uri("/holds/{id}", UUID.randomUUID()).retrieve(), HttpStatus.NOT_FOUND);
 	}
 
 }

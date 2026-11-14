@@ -47,7 +47,9 @@ public class HoldService {
 		UUID holdId = UUID.randomUUID();
 		Instant now = clock.instant();
 		holds.insertHold(holdId, eventId, userId, now.plus(holdDuration), now);
-		holds.markSeatsHeld(holdId, seatIds);
+		if (holds.markSeatsHeld(holdId, seatIds) != seatIds.size()) {
+			throw new SeatsUnavailableException("One or more requested seats are not available");
+		}
 		return getHold(holdId);
 	}
 

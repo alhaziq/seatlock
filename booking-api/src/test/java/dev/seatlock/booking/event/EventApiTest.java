@@ -1,5 +1,6 @@
 package dev.seatlock.booking.event;
 
+import static dev.seatlock.booking.ProblemJson.assertProblem;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -59,21 +60,19 @@ class EventApiTest {
 	@Test
 	void unknownEventIs404() {
 		UUID id = UUID.randomUUID();
-		assertThat(client().get().uri("/events/{id}", id).retrieve().toBodilessEntity().getStatusCode())
-				.isEqualTo(HttpStatus.NOT_FOUND);
-		assertThat(client().get().uri("/events/{id}/seats", id).retrieve().toBodilessEntity().getStatusCode())
-				.isEqualTo(HttpStatus.NOT_FOUND);
+		assertProblem(client().get().uri("/events/{id}", id).retrieve(), HttpStatus.NOT_FOUND);
+		assertProblem(client().get().uri("/events/{id}/seats", id).retrieve(), HttpStatus.NOT_FOUND);
 	}
 
 	@ParameterizedTest
 	@ValueSource(ints = { 0, -1, 10_001 })
 	void invalidSeatCountIs400(int seatCount) {
-		assertThat(post("Launch Night", seatCount).toBodilessEntity().getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+		assertProblem(post("Launch Night", seatCount), HttpStatus.BAD_REQUEST);
 	}
 
 	@Test
 	void blankNameIs400() {
-		assertThat(post(" ", 10).toBodilessEntity().getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+		assertProblem(post(" ", 10), HttpStatus.BAD_REQUEST);
 	}
 
 }
