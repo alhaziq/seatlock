@@ -1,0 +1,8 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/seatlock
+    username: seatlock
+    password: seatlock
+
+seatlock:
+  hold-duration: PT5M
