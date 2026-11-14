@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 /**
@@ -25,7 +26,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "seatlock.expiry.enabled=false")
-@Import({ TestcontainersConfiguration.class, IntegrationTest.TestClockConfig.class })
+@Import(IntegrationTest.TestClockConfig.class)
+@ContextConfiguration(initializers = TestcontainersConfiguration.class)
 @ExtendWith(IntegrationTest.CleanState.class)
 public @interface IntegrationTest {
 

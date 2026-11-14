@@ -1,18 +1,28 @@
 package dev.seatlock.booking;
 
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.context.annotation.Bean;
+import org.springframework.boot.test.util.TestPropertyValues;
+import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
-@TestConfiguration(proxyBeanMethods = false)
-class TestcontainersConfiguration {
+/**
+ * One Postgres container per JVM, independent of Spring context caching. It is never stopped by a
+ * context; Testcontainers' Ryuk removes it when the JVM exits.
+ */
+class TestcontainersConfiguration implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 
-	@Bean
-	@ServiceConnection
-	PostgreSQLContainer postgresContainer() {
-		return new PostgreSQLContainer(DockerImageName.parse("postgres:17"));
+	private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17");
+
+	static {
+		POSTGRES.start();
+	}
+
+	@Override
+	public void initialize(ConfigurableApplicationContext context) {
+		TestPropertyValues.of(
+				"spring.datasource.url=" + POSTGRES.getJdbcUrl(),
+				"spring.datasource.username=" + POSTGRES.getUsername(),
+				"spring.datasource.password=" + POSTGRES.getPassword()).applyTo(context);
 	}
 
 }
