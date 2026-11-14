@@ -1,0 +1,63 @@
+package dev.seatlock.booking.hold;
+
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.stereotype.Repository;
+
+@Repository
+class HoldRepository {
+
+	private final JdbcClient jdbc;
+
+	HoldRepository(JdbcClient jdbc) {
+		this.jdbc = jdbc;
+	}
+
+	/**
+	 * Locks the wanted seats that are still available, in id order so that overlapping requests
+	 * cannot deadlock. Under READ COMMITTED a row taken while we waited is re-checked and drops out.
+	 */
+	List<UUID> lockAvailableSeats(UUID eventId, List<UUID> seatIds) {
+		return jdbc.sql("""
+				select id from seats
+				 where id in (:seatIds) and event_id = :eventId and status = 'AVAILABLE'
+				 order by id
+				   for update""")
+				.param("seatIds", seatIds).param("eventId", eventId)
+				.query(UUID.class).list();
+	}
+
+	void insertHold(UUID id, UUID eventId, UUID userId, Instant expiresAt, Instant createdAt) {
+		jdbc.sql("""
+				insert into holds (id, event_id, user_id, status, expires_at, created_at)
+				values (?, ?, ?, 'ACTIVE', ?, ?)""")
+				.params(id, eventId, userId, utc(expiresAt), utc(createdAt)).update();
+	}
+
+	void markSeatsHeld(UUID holdId, List<UUID> seatIds) {
+		jdbc.sql("update seats set status = 'HELD', hold_id = :holdId where id in (:seatIds)")
+				.param("holdId", holdId).param("seatIds", seatIds).update();
+	}
+
+	Optional<Hold> findHold(UUID id) {
+		List<UUID> seatIds = jdbc.sql("select id from seats where hold_id = ? order by label::int")
+				.param(id).query(UUID.class).list();
+		return jdbc.sql("select id, event_id, user_id, status, expires_at from holds where id = ?")
+				.param(id)
+				.query((rs, i) -> new Hold(rs.getObject("id", UUID.class), rs.getObject("event_id", UUID.class),
+						rs.getObject("user_id", UUID.class), HoldStatus.valueOf(rs.getString("status")), seatIds,
+						rs.getObject("expires_at", OffsetDateTime.class).toInstant()))
+				.optional();
+	}
+
+	private static OffsetDateTime utc(Instant instant) {
+		return instant.atOffset(ZoneOffset.UTC);
+	}
+
+}
