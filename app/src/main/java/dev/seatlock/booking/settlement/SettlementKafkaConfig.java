@@ -1,6 +1,7 @@
 package dev.seatlock.booking.settlement;
 
 import java.time.Duration;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -28,6 +29,8 @@ class SettlementKafkaConfig {
 			settlement.failUnsettled(PaymentRequestedListener.paymentId((String) record.value()),
 					"PROVIDER_UNAVAILABLE");
 		}, new FixedBackOff(backoff.toMillis(), maxRetries));
+		// Spring Kafka sends ClassCastException and a few others straight to recovery; route every exception through the back-off.
+		handler.setClassifications(Map.of(), true);
 		// shortcut: an unexpected failure blocks its partition until it clears; add a dead-letter topic plus a sweep that re-enqueues old PENDING payments when one stuck record must not hold up others.
 		handler.setBackOffFunction((record, e) -> isProviderTimeout(e) ? null
 				: new FixedBackOff(backoff.toMillis(), FixedBackOff.UNLIMITED_ATTEMPTS));

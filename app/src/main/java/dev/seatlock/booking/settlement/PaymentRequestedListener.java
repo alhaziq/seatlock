@@ -50,11 +50,12 @@ class PaymentRequestedListener {
 			throw new IllegalArgumentException("no payload");
 		}
 		try {
-			UUID id = JsonMapper.shared().readValue(json, PaymentRequested.class).paymentId();
-			if (id == null) {
+			// The JSON literal null reads as a null request.
+			PaymentRequested request = JsonMapper.shared().readValue(json, PaymentRequested.class);
+			if (request == null || request.paymentId() == null) {
 				throw new IllegalArgumentException("no paymentId");
 			}
-			return id;
+			return request.paymentId();
 		}
 		catch (JacksonException e) {
 			throw new IllegalArgumentException("not a payment request", e);

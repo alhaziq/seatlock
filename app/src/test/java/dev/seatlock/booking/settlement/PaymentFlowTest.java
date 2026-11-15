@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -121,9 +122,15 @@ class PaymentFlowTest {
 
 	@Test
 	void badMessagesAreSkipped() throws Exception {
-		kafka.send(TOPIC, UUID.randomUUID().toString(), "not json").get();
 		UUID unknown = UUID.randomUUID();
-		kafka.send(TOPIC, unknown.toString(), "{\"paymentId\":\"" + unknown + "\"}").get();
+		// null is a tombstone: a record with no value at all.
+		List<String> payloads = Arrays.asList("not json", "null", "{}", "{\"paymentId\":null}",
+				"{\"paymentId\":\"not-a-uuid\"}", "", null, "{\"paymentId\":\"" + unknown + "\"}");
+		for (String payload : payloads) {
+			RecordMetadata sent = kafka.send(TOPIC, UUID.randomUUID().toString(), payload).get().getRecordMetadata();
+			// Each record may sit on its own partition, so only its committed offset proves it was not stuck.
+			awaitCommitted(sent);
+		}
 
 		awaitStatus(pay(holdOneSeat(2500)).getBody().id(), PaymentStatus.SUCCEEDED);
 	}
