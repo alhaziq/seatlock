@@ -34,6 +34,8 @@ public class OutboxRelay {
 	 */
 	@Transactional
 	public int publishBatch() {
+		// shortcut: per-key order holds only within one batch of one relay; serialise per key (e.g. an advisory lock on the key hash) before any key carries more than one message.
+		// shortcut: a row that can never be sent blocks the rows behind it; add a retry cap or dead-letter marking when payloads stop being fixed and tiny.
 		List<OutboxRepository.Row> rows = outbox.lockUnpublished(100);
 		if (rows.isEmpty()) {
 			return 0;
