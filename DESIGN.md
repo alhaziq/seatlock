@@ -63,6 +63,8 @@ One repository, two deployables, split because they scale and fail differently:
 - **worker** — consumes events. Talks to slow, unreliable things (payment
   provider, webhook receivers) and retries them.
 
+Both deployables are built from the `app/` codebase and selected by Spring profile.
+
 Shared infrastructure:
 
 - **Postgres** — the source of truth for seats, holds, bookings, payments, ledger.
@@ -99,7 +101,7 @@ Each one ends deployable and worth showing.
 
 ## Tests that must exist
 
-- 1,000 parallel hold requests for 100 seats: exactly 100 succeed.
+- 1,000 concurrent hold requests for 100 seats: exactly 100 succeed.
 - The same `Idempotency-Key` sent twice: one payment, same response.
 - A Kafka message delivered twice: one charge, one confirmation.
 - Ledger entries always sum to zero.

@@ -15,4 +15,4 @@ jobs:
           java-version: 21
           cache: maven
       - run: ./mvnw -B verify
-        working-directory: booking-api
+        working-directory: app

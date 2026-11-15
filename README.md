@@ -17,7 +17,7 @@ You need Java 21 and a Docker-compatible runtime. This setup is machine-local: P
 
 ```
 docker compose up -d
-cd booking-api
+cd app
 ./mvnw spring-boot:run
 ```
 
@@ -42,7 +42,7 @@ A hold lasts five minutes. Holding the same seat again returns a conflict.
 
 A hold request runs in one database transaction. First it runs `select ... for update` on the requested seats that are still `AVAILABLE`, ordered by id. Postgres locks those rows, so a second request for the same seat waits. When the first transaction commits, the waiting request re-checks the row, sees it is no longer `AVAILABLE`, and drops it from its result. The service then compares the number of locked rows with the number of seats asked for. If they differ, it fails the whole request with a conflict and nothing is written. Otherwise it inserts the hold and marks the seats `HELD` in the same transaction. The code locks rows in id order, so every transaction takes its locks in the same order. Expiry frees a hold and its seats in a single statement.
 
-[`HoldConcurrencyTest`](booking-api/src/test/java/dev/seatlock/booking/hold/HoldConcurrencyTest.java) checks this against a real Postgres. It makes 1,000 concurrent calls to the hold service (not HTTP requests) for 100 seats, on virtual threads, through the default database connection pool. It asserts that exactly 100 succeed and every seat ends `HELD` by its own hold. A second test makes 200 overlapping hold attempts for the same six seats in opposite seat orders. It asserts that exactly one wins, with no deadlock and no server error.
+[`HoldConcurrencyTest`](app/src/test/java/dev/seatlock/booking/hold/HoldConcurrencyTest.java) checks this against a real Postgres. It makes 1,000 concurrent calls to the hold service (not HTTP requests) for 100 seats, on virtual threads, through the default database connection pool. It asserts that exactly 100 succeed and every seat ends `HELD` by its own hold. A second test makes 200 overlapping hold attempts for the same six seats in opposite seat orders. It asserts that exactly one wins, with no deadlock and no server error.
 
 ## Design
 

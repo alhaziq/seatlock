@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import dev.seatlock.booking.hold.DuplicateSeatsException;
 import dev.seatlock.booking.hold.SeatsUnavailableException;
 
 // Extends the base handler so bean-validation failures (MethodArgumentNotValidException) and a missing or
@@ -23,9 +24,8 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
 	}
 
-	// shortcut: any IllegalArgumentException becomes 400; only the duplicate-seat check throws one today.
-	@ExceptionHandler(IllegalArgumentException.class)
-	ProblemDetail badRequest(IllegalArgumentException e) {
+	@ExceptionHandler(DuplicateSeatsException.class)
+	ProblemDetail duplicateSeats(DuplicateSeatsException e) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
 	}
 

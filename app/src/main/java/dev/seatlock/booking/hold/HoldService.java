@@ -37,7 +37,7 @@ public class HoldService {
 	@Transactional
 	public Hold createHold(UUID eventId, UUID userId, List<UUID> seatIds) {
 		if (new HashSet<>(seatIds).size() != seatIds.size()) {
-			throw new IllegalArgumentException("seatIds must not contain duplicates");
+			throw new DuplicateSeatsException();
 		}
 		events.getEvent(eventId);
 		List<UUID> locked = holds.lockAvailableSeats(eventId, seatIds);

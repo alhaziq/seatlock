@@ -164,4 +164,14 @@ class HoldApiTest {
 		assertProblem(client().get().uri("/holds/{id}", UUID.randomUUID()).retrieve(), HttpStatus.NOT_FOUND);
 	}
 
+	@Test
+	void unexpectedIllegalArgumentIsNot400() throws Exception {
+		Class<?> handler = Class.forName("dev.seatlock.booking.ApiExceptionHandler");
+		assertThat(java.util.Arrays.stream(handler.getDeclaredMethods())
+				.map(m -> m.getAnnotation(org.springframework.web.bind.annotation.ExceptionHandler.class))
+				.filter(java.util.Objects::nonNull)
+				.flatMap(a -> java.util.Arrays.stream(a.value())))
+				.doesNotContain(IllegalArgumentException.class);
+	}
+
 }
