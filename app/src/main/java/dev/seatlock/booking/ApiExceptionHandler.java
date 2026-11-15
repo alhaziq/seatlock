@@ -8,6 +8,8 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import dev.seatlock.booking.hold.DuplicateSeatsException;
 import dev.seatlock.booking.hold.SeatsUnavailableException;
+import dev.seatlock.booking.payment.HoldNotPayableException;
+import dev.seatlock.booking.payment.IdempotencyKeyConflictException;
 
 // Extends the base handler so bean-validation failures (MethodArgumentNotValidException) and a missing or
 // malformed X-User-Id header (MissingRequestHeaderException, TypeMismatchException) become 400 ProblemDetail.
@@ -27,6 +29,16 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(DuplicateSeatsException.class)
 	ProblemDetail duplicateSeats(DuplicateSeatsException e) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+	}
+
+	@ExceptionHandler(HoldNotPayableException.class)
+	ProblemDetail holdNotPayable(HoldNotPayableException e) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
+	}
+
+	@ExceptionHandler(IdempotencyKeyConflictException.class)
+	ProblemDetail idempotencyKeyConflict(IdempotencyKeyConflictException e) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, e.getMessage());
 	}
 
 }
