@@ -25,7 +25,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "seatlock.expiry.enabled=false")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+		"seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false", "seatlock.settlement.enabled=false" })
 @Import(IntegrationTest.TestClockConfig.class)
 @ContextConfiguration(initializers = TestcontainersConfiguration.class)
 @ExtendWith(IntegrationTest.CleanState.class)
@@ -47,7 +48,7 @@ public @interface IntegrationTest {
 		@Override
 		public void beforeEach(ExtensionContext context) {
 			var ctx = SpringExtension.getApplicationContext(context);
-			ctx.getBean(JdbcClient.class).sql("truncate events, seats, holds cascade").update();
+			ctx.getBean(JdbcClient.class).sql("truncate events, seats, holds, payments, outbox, ledger_entries cascade").update();
 			ctx.getBean(MutableClock.class).reset();
 		}
 

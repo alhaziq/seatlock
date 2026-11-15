@@ -31,8 +31,13 @@ class EventApiTest {
 	}
 
 	private RestClient.ResponseSpec post(String name, int seatCount) {
+		return post(name, seatCount, 2500, "MYR");
+	}
+
+	private RestClient.ResponseSpec post(String name, int seatCount, long priceCents, String currency) {
 		return client().post().uri("/events")
-				.body(Map.of("name", name, "startsAt", "2027-01-01T20:00:00Z", "seatCount", seatCount))
+				.body(Map.of("name", name, "startsAt", "2027-01-01T20:00:00Z", "seatCount", seatCount,
+						"priceCents", priceCents, "currency", currency))
 				.retrieve();
 	}
 
@@ -73,6 +78,26 @@ class EventApiTest {
 	@Test
 	void blankNameIs400() {
 		assertProblem(post(" ", 10), HttpStatus.BAD_REQUEST);
+	}
+
+	@Test
+	void createEventReturnsPriceAndCurrency() {
+		ResponseEntity<Event> res = post("Launch Night", 3, 2500, "MYR").toEntity(Event.class);
+		assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+		assertThat(res.getBody().priceCents()).isEqualTo(2500);
+		assertThat(res.getBody().currency()).isEqualTo("MYR");
+	}
+
+	@ParameterizedTest
+	@ValueSource(longs = { 0, -1 })
+	void nonPositivePriceIs400(long priceCents) {
+		assertProblem(post("Launch Night", 3, priceCents, "MYR"), HttpStatus.BAD_REQUEST);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "", "my", "myr", "MYRR" })
+	void badCurrencyIs400(String currency) {
+		assertProblem(post("Launch Night", 3, 2500, currency), HttpStatus.BAD_REQUEST);
 	}
 
 }

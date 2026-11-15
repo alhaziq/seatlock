@@ -25,7 +25,8 @@ class EventController {
 	@PostMapping("/events")
 	@ResponseStatus(HttpStatus.CREATED)
 	Event create(@Valid @RequestBody CreateEventRequest request) {
-		return events.createEvent(request.name(), request.startsAt(), request.seatCount());
+		return events.createEvent(request.name(), request.startsAt(), request.seatCount(), request.priceCents(),
+				request.currency());
 	}
 
 	@GetMapping("/events/{id}")
