@@ -14,6 +14,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.annotation.AliasFor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -25,12 +26,16 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-		"seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false", "seatlock.settlement.enabled=false" })
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(IntegrationTest.TestClockConfig.class)
 @ContextConfiguration(initializers = TestcontainersConfiguration.class)
 @ExtendWith(IntegrationTest.CleanState.class)
 public @interface IntegrationTest {
+
+	/** Background jobs and the listener are off unless a test replaces these; {@code {}} lets profile files decide. */
+	@AliasFor(annotation = SpringBootTest.class, attribute = "properties")
+	String[] properties() default { "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false",
+			"seatlock.settlement.enabled=false" };
 
 	@TestConfiguration(proxyBeanMethods = false)
 	class TestClockConfig {

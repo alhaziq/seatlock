@@ -6,9 +6,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.TopicBuilder;
 
 @Configuration(proxyBeanMethods = false)
-class KafkaTopics {
+public class KafkaTopics {
 
-	static final String PAYMENTS_REQUESTED = "payments.requested";
+	public static final String PAYMENTS_REQUESTED = "payments.requested";
 
 	@Bean
 	NewTopic paymentsRequested() {
