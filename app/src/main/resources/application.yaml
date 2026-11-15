@@ -3,9 +3,20 @@ spring:
     url: jdbc:postgresql://localhost:5432/seatlock
     username: seatlock
     password: seatlock
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
 
 seatlock:
   hold-duration: PT5M
   expiry:
     interval: PT5S
+    enabled: true
+  outbox:
+    interval: PT0.5S
     enabled: true
