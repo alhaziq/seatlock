@@ -38,31 +38,37 @@ public class SettlementService {
 			return;
 		}
 		// shortcut: the payment row stays locked during the provider call; move to claim-then-finalize with a recovery sweep when provider latency matters.
-		ChargeResult result = provider.charge(paymentId, payment.amountCents(), payment.currency());
-		Instant now = clock.instant();
-		switch (result) {
-			case ChargeResult.Approved approved -> {
-				settlements.markSucceeded(paymentId, now);
-				ledger.postPayment(paymentId, payment.eventId(), payment.amountCents(), payment.currency(), now);
-				settlements.confirmHold(payment.holdId());
-			}
-			case ChargeResult.Declined declined -> fail(payment, declined.reason(), now);
-		}
+		finish(payment, provider.charge(paymentId, payment.amountCents(), payment.currency()));
 	}
 
-	/** Marks a still-PENDING payment FAILED and releases its hold; leaves a settled payment alone. */
+	/**
+	 * Gives up on a still-PENDING payment, unless the provider already charged it: then the charge is posted as by
+	 * {@link #settle}. Otherwise the payment is FAILED (with the provider's decline reason, if any) and its hold
+	 * released. A settled or unknown payment is left alone.
+	 */
 	@Transactional
 	public void failUnsettled(UUID paymentId, String reason) {
 		var payment = settlements.lockPayment(paymentId).orElse(null);
 		if (payment == null || !payment.status().equals("PENDING")) {
 			return;
 		}
-		fail(payment, reason, clock.instant());
+		// shortcut: a real provider could still complete an in-flight charge after this lookup; a real integration would void by idempotency key before giving up.
+		finish(payment, provider.findCharge(paymentId).orElse(new ChargeResult.Declined(reason)));
 	}
 
-	private void fail(SettlementRepository.LockedPayment payment, String reason, Instant now) {
-		settlements.markFailed(payment.id(), reason, now);
-		settlements.releaseHold(payment.holdId());
+	private void finish(SettlementRepository.LockedPayment payment, ChargeResult result) {
+		Instant now = clock.instant();
+		switch (result) {
+			case ChargeResult.Approved approved -> {
+				settlements.markSucceeded(payment.id(), now);
+				ledger.postPayment(payment.id(), payment.eventId(), payment.amountCents(), payment.currency(), now);
+				settlements.confirmHold(payment.holdId());
+			}
+			case ChargeResult.Declined declined -> {
+				settlements.markFailed(payment.id(), declined.reason(), now);
+				settlements.releaseHold(payment.holdId());
+			}
+		}
 	}
 
 }

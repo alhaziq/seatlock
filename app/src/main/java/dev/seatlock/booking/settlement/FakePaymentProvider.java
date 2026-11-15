@@ -2,6 +2,7 @@ package dev.seatlock.booking.settlement;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -41,6 +42,11 @@ public class FakePaymentProvider implements PaymentProvider {
 			charges.merge(id, 1, Integer::sum);
 			return new ChargeResult.Approved("fake_" + UUID.randomUUID());
 		});
+	}
+
+	@Override
+	public Optional<ChargeResult> findCharge(UUID paymentId) {
+		return Optional.ofNullable(results.get(paymentId));
 	}
 
 	/** How many times money actually moved for this id: 0 or 1. */

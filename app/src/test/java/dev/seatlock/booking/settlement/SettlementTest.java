@@ -183,6 +183,40 @@ class SettlementTest {
 	}
 
 	@Test
+	void failUnsettledPostsAChargeTheProviderAlreadyApproved() {
+		Payment payment = pendingPayment(2500, 2);
+		// The charge went through but the settling transaction never committed.
+		provider.charge(payment.id(), 5000, "MYR");
+
+		settlement.failUnsettled(payment.id(), "PROVIDER_UNAVAILABLE");
+
+		assertThat(payments.getPayment(payment.id()).status()).isEqualTo(PaymentStatus.SUCCEEDED);
+		var hold = holds.getHold(payment.holdId());
+		assertThat(hold.status()).isEqualTo(HoldStatus.CONFIRMED);
+		assertThat(events.listSeats(hold.eventId())).extracting(Seat::status)
+				.containsExactly(SeatStatus.BOOKED, SeatStatus.BOOKED);
+		assertThat(ledger(payment.id())).containsExactlyInAnyOrder("DEBIT PROVIDER_CLEARING 5000 MYR",
+				"CREDIT EVENT_PAYABLE 5000 MYR");
+		assertThat(provider.chargesMade(payment.id())).isEqualTo(1);
+	}
+
+	@Test
+	void failUnsettledKeepsTheProvidersDeclineReason() {
+		Payment payment = pendingPayment(2501, 1);
+		UUID eventId = holds.getHold(payment.holdId()).eventId();
+		assertThat(provider.charge(payment.id(), 2501, "MYR")).isInstanceOf(ChargeResult.Declined.class);
+
+		settlement.failUnsettled(payment.id(), "PROVIDER_UNAVAILABLE");
+
+		Payment failed = payments.getPayment(payment.id());
+		assertThat(failed.status()).isEqualTo(PaymentStatus.FAILED);
+		assertThat(failed.failureReason()).isEqualTo("INSUFFICIENT_FUNDS");
+		assertThat(holds.getHold(payment.holdId()).status()).isEqualTo(HoldStatus.RELEASED);
+		assertThat(events.listSeats(eventId)).extracting(Seat::status).containsExactly(SeatStatus.AVAILABLE);
+		assertThat(ledgerCount()).isZero();
+	}
+
+	@Test
 	void unknownPaymentIsIgnored() {
 		settlement.settle(UUID.randomUUID());
 	}

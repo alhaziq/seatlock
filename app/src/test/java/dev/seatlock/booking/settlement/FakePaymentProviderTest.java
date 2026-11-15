@@ -40,4 +40,21 @@ class FakePaymentProviderTest {
 		assertThat(provider.chargesMade(id)).isEqualTo(1);
 	}
 
+	@Test
+	void findChargeReturnsTheRememberedResultAndMovesNoMoney() {
+		UUID id = UUID.randomUUID();
+		assertThat(provider.findCharge(id)).isEmpty();
+
+		ChargeResult charged = provider.charge(id, 5000, "MYR");
+
+		assertThat(provider.findCharge(id)).contains(charged);
+		assertThat(((ChargeResult.Approved) provider.findCharge(id).orElseThrow()).providerReference())
+				.isEqualTo(((ChargeResult.Approved) charged).providerReference());
+		assertThat(provider.chargesMade(id)).isEqualTo(1);
+
+		UUID timedOut = UUID.randomUUID();
+		assertThatThrownBy(() -> provider.charge(timedOut, 5002, "MYR")).isInstanceOf(ProviderTimeoutException.class);
+		assertThat(provider.findCharge(timedOut)).isEmpty();
+	}
+
 }
