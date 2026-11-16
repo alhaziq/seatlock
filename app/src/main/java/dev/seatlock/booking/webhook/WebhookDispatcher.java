@@ -12,6 +12,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,8 @@ import dev.seatlock.booking.webhook.WebhookDeliveryRepository.Result;
  */
 @Service
 public class WebhookDispatcher {
+
+	private static final Logger log = LoggerFactory.getLogger(WebhookDispatcher.class);
 
 	private static final int MAX_RESPONSE_CHARS = 1000;
 
@@ -69,8 +73,14 @@ public class WebhookDispatcher {
 		int attempted = 0;
 		// shortcut: sends within a batch are sequential, so one slow receiver delays the rest of its batch, move to per-endpoint workers when that matters.
 		for (Claim claim : claim()) {
-			if (deliver(claim)) {
-				attempted++;
+			try {
+				if (deliver(claim)) {
+					attempted++;
+				}
+			}
+			catch (RuntimeException e) {
+				// one bad row must not stop the batch; it is due again when its lease ends
+				log.warn("Webhook delivery {} failed to dispatch", claim.id(), e);
 			}
 		}
 		return attempted;

@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -61,6 +62,9 @@ class WebhookDispatcherTest {
 
 	@Autowired
 	MutableClock clock;
+
+	@Value("${seatlock.webhooks.lease}")
+	Duration lease;
 
 	/** Creates an organizer endpoint at {@code url} and {@code count} PENDING deliveries for it. */
 	static List<UUID> enqueue(EventService events, HoldService holds, WebhookEndpointRepository endpoints,
@@ -262,7 +266,7 @@ class WebhookDispatcherTest {
 
 			assertThat(dispatcher.claim()).hasSize(1);
 			assertThat(dispatcher.dispatchBatch()).isZero();
-			clock.advance(Duration.ofMinutes(1).plusSeconds(1));
+			clock.advance(lease.plusSeconds(1));
 			assertThat(dispatcher.dispatchBatch()).isEqualTo(1);
 
 			assertThat(receiver.requests()).hasSize(1);
@@ -279,7 +283,7 @@ class WebhookDispatcherTest {
 			var claims = dispatcher.claim();
 			assertThat(claims).hasSize(1);
 
-			clock.advance(Duration.ofMinutes(1));
+			clock.advance(lease);
 			assertThat(dispatcher.deliver(claims.get(0))).isFalse();
 
 			assertThat(receiver.requests()).isEmpty();
@@ -287,6 +291,70 @@ class WebhookDispatcherTest {
 			assertThat(delivery(jdbc, id).get("status")).isEqualTo("PENDING");
 			assertThat(delivery(jdbc, id).get("attempts")).isEqualTo(1);
 			assertThat(nextAttemptAt(id)).isEqualTo(claims.get(0).leaseUntil());
+		}
+	}
+
+	@Test
+	void responseBodyWithNulIsRecorded() throws Exception {
+		try (var receiver = new TestReceiver()) {
+			receiver.respond(500, "bad\u0000body", Duration.ZERO);
+			UUID id = one(receiver);
+
+			assertThat(dispatcher.dispatchBatch()).isEqualTo(1);
+
+			assertThat(attempts(jdbc, id)).singleElement().satisfies(r -> {
+				assertThat(r.get("status_code")).isEqualTo(500);
+				assertThat(r.get("response_body")).isEqualTo("badbody");
+			});
+			assertThat(delivery(jdbc, id).get("status")).isEqualTo("PENDING");
+			assertThat(nextAttemptAt(id)).isEqualTo(clock.instant().plus(Duration.ofSeconds(10)));
+		}
+	}
+
+	@Test
+	void failingRowDoesNotStopTheBatch() throws Exception {
+		try (var receiver = new TestReceiver()) {
+			List<UUID> ids = enqueue(events, holds, endpoints, webhookEvents, tx, jdbc, clock, receiver.url(), 3);
+			UUID bad = ids.get(1);
+			// Makes recording this one delivery throw, wherever it lands in the claimed batch.
+			jdbc.sql("""
+					create function fail_webhook_record() returns trigger language plpgsql as $$
+					begin raise exception 'record failed for %', new.id; end $$""").update();
+			jdbc.sql("create trigger fail_webhook_record before update on webhook_deliveries for each row"
+					+ " when (old.id = '" + bad + "' and old.status = 'PENDING' and new.attempts = old.attempts)"
+					+ " execute function fail_webhook_record()").update();
+			try {
+				assertThat(dispatcher.dispatchBatch()).isEqualTo(2);
+			}
+			finally {
+				jdbc.sql("drop trigger fail_webhook_record on webhook_deliveries").update();
+				jdbc.sql("drop function fail_webhook_record()").update();
+			}
+
+			assertThat(receiver.requests()).hasSize(3);
+			for (UUID id : ids) {
+				assertThat(delivery(jdbc, id).get("status")).isEqualTo(id.equals(bad) ? "PENDING" : "DELIVERED");
+			}
+			assertThat(attempts(jdbc, bad)).isEmpty();
+		}
+	}
+
+	@Test
+	void staleClaimIsNotRecordedAfterRetryAndReclaim() throws Exception {
+		try (var receiver = new TestReceiver()) {
+			UUID id = one(receiver);
+			var stale = dispatcher.claim().get(0);
+			// As if the delivery went DEAD, was retried (attempts reset to 0) and was claimed again to attempt 1.
+			Instant otherLease = stale.leaseUntil().plusSeconds(30);
+			jdbc.sql("update webhook_deliveries set attempts = ?, next_attempt_at = ? where id = ?")
+					.params(stale.attempts(), otherLease.atOffset(java.time.ZoneOffset.UTC), id).update();
+			var before = delivery(jdbc, id);
+
+			dispatcher.deliver(stale);
+
+			assertThat(attempts(jdbc, id)).isEmpty();
+			assertThat(delivery(jdbc, id)).isEqualTo(before);
+			assertThat(nextAttemptAt(id)).isEqualTo(otherLease);
 		}
 	}
 

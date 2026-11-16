@@ -1,5 +1,6 @@
 package dev.seatlock.booking.webhook;
 
+import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URI;
@@ -63,7 +64,13 @@ public class WebhookUrlPolicy {
 	private static boolean isPrivate(InetAddress a) {
 		return a.isLoopbackAddress() || a.isAnyLocalAddress() || a.isLinkLocalAddress() || a.isSiteLocalAddress()
 				|| a.isMulticastAddress()
+				|| (a instanceof Inet4Address && isReservedIpv4(a.getAddress()))
 				|| (a instanceof Inet6Address && (a.getAddress()[0] & 0xfe) == 0xfc);
+	}
+
+	/** 0.0.0.0/8 ("this network") and 100.64.0.0/10 (carrier-grade NAT, home of some cloud metadata endpoints). */
+	private static boolean isReservedIpv4(byte[] ip) {
+		return ip[0] == 0 || (ip[0] == 100 && (ip[1] & 0xc0) == 64);
 	}
 
 }

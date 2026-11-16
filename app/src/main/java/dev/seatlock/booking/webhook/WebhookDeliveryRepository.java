@@ -74,17 +74,19 @@ class WebhookDeliveryRepository {
 
 	/**
 	 * Records the attempt and moves the delivery on: DELIVERED on success, else due again at {@code retryAt}, or
-	 * DEAD when {@code retryAt} is null. Does nothing when the row was re-claimed or finished since this claim.
+	 * DEAD when {@code retryAt} is null. Does nothing when the row was re-claimed or finished since this claim (the
+	 * lease end tells a re-claim apart even after a manual retry brings {@code attempts} back to the same number).
 	 * Must run in a transaction: the guarded update locks the row, so attempt numbers cannot collide.
 	 */
 	void record(Claim claim, Result result, Instant retryAt) {
 		int updated = jdbc.sql("""
 				update webhook_deliveries
 				   set status = ?, delivered_at = ?, next_attempt_at = coalesce(?, next_attempt_at)
-				 where id = ? and attempts = ? and status = 'PENDING'""")
+				 where id = ? and attempts = ? and next_attempt_at = ? and status = 'PENDING'""")
 				.params(result.succeeded() ? "DELIVERED" : retryAt == null ? "DEAD" : "PENDING",
 						result.succeeded() ? utc(result.attemptedAt()) : null,
-						result.succeeded() || retryAt == null ? null : utc(retryAt), claim.id(), claim.attempts())
+						result.succeeded() || retryAt == null ? null : utc(retryAt), claim.id(), claim.attempts(),
+						utc(claim.leaseUntil()))
 				.update();
 		if (updated == 0) {
 			return;
@@ -94,8 +96,8 @@ class WebhookDeliveryRepository {
 				       (id, delivery_id, attempt, attempted_at, status_code, error, response_body, duration_ms)
 				select ?, ?, coalesce(max(attempt), 0) + 1, ?, ?, ?, ?, ?
 				  from webhook_attempts where delivery_id = ?""")
-				.params(UUID.randomUUID(), claim.id(), utc(result.attemptedAt()), result.statusCode(), result.error(),
-						result.responseBody(), result.durationMs(), claim.id())
+				.params(UUID.randomUUID(), claim.id(), utc(result.attemptedAt()), result.statusCode(),
+						withoutNul(result.error()), withoutNul(result.responseBody()), result.durationMs(), claim.id())
 				.update();
 	}
 
@@ -151,6 +153,11 @@ class WebhookDeliveryRepository {
 				 where id = ? and organizer_id = ? and status = 'DEAD'
 				returning """ + " " + DELIVERY_COLUMNS)
 				.params(utc(now), id, organizerId).query(WebhookDeliveryRepository::delivery).optional();
+	}
+
+	/** Postgres text cannot hold a NUL character, and a receiver's response may contain one. */
+	private static String withoutNul(String s) {
+		return s == null ? null : s.replace("\u0000", "");
 	}
 
 	private static OffsetDateTime utc(Instant instant) {

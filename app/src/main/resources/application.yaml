@@ -36,7 +36,8 @@ seatlock:
     enabled: true
     interval: PT1S
     batch-size: 20
-    lease: PT1M
+    # must exceed batch-size x (connect + read timeout) = 20 x 7 s, or claims expire before they are sent
+    lease: PT3M
     max-attempts: 6
     base-backoff: PT10S
     allow-http: false
