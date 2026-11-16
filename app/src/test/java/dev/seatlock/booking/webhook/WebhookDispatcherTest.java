@@ -272,6 +272,24 @@ class WebhookDispatcherTest {
 		}
 	}
 
+	@Test
+	void sendIsSkippedOnceItsLeaseHasPassed() throws Exception {
+		try (var receiver = new TestReceiver()) {
+			UUID id = one(receiver);
+			var claims = dispatcher.claim();
+			assertThat(claims).hasSize(1);
+
+			clock.advance(Duration.ofMinutes(1));
+			assertThat(dispatcher.deliver(claims.get(0))).isFalse();
+
+			assertThat(receiver.requests()).isEmpty();
+			assertThat(attempts(jdbc, id)).isEmpty();
+			assertThat(delivery(jdbc, id).get("status")).isEqualTo("PENDING");
+			assertThat(delivery(jdbc, id).get("attempts")).isEqualTo(1);
+			assertThat(nextAttemptAt(id)).isEqualTo(claims.get(0).leaseUntil());
+		}
+	}
+
 	@Nested
 	@IntegrationTest(properties = { "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false",
 			"seatlock.settlement.enabled=false", "seatlock.webhooks.enabled=false",

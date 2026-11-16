@@ -33,8 +33,8 @@ class WebhookDeliveryRepository {
 				.params(id, type, holdId, payload, utc(now), utc(now), eventId).update();
 	}
 
-	/** A claimed delivery with its endpoint's current url and secret; {@code attempts} already counts this attempt. */
-	record Claim(UUID id, String type, String payload, int attempts, String url, String secret) {
+	/** A claimed delivery with its endpoint's current url and secret; {@code attempts} already counts this attempt; the claim is ours until {@code leaseUntil}. */
+	record Claim(UUID id, String type, String payload, int attempts, String url, String secret, Instant leaseUntil) {
 	}
 
 	/** The outcome of one send: a status code, or an error when no response arrived (or none was attempted). */
@@ -63,10 +63,11 @@ class WebhookDeliveryRepository {
 				   set attempts = d.attempts + 1, next_attempt_at = ?
 				  from due, webhook_endpoints e
 				 where d.id = due.id and e.id = d.endpoint_id
-				returning d.id, d.type, d.payload, d.attempts, e.url, e.secret""")
+				returning d.id, d.type, d.payload, d.attempts, e.url, e.secret, d.next_attempt_at""")
 				.params(utc(now), limit, utc(leaseUntil))
 				.query((rs, n) -> new Claim(rs.getObject("id", UUID.class), rs.getString("type"),
-						rs.getString("payload"), rs.getInt("attempts"), rs.getString("url"), rs.getString("secret")))
+						rs.getString("payload"), rs.getInt("attempts"), rs.getString("url"), rs.getString("secret"),
+						rs.getObject("next_attempt_at", OffsetDateTime.class).toInstant()))
 				.list();
 	}
 

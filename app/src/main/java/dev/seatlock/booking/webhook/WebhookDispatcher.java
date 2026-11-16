@@ -66,16 +66,27 @@ public class WebhookDispatcher {
 
 	/** Claims, sends and records up to batch-size due deliveries; returns how many were attempted. */
 	public int dispatchBatch() {
-		List<Claim> claims = claim();
+		int attempted = 0;
 		// shortcut: sends within a batch are sequential, so one slow receiver delays the rest of its batch, move to per-endpoint workers when that matters.
-		for (Claim claim : claims) {
-			Result result = send(claim);
-			Instant now = clock.instant();
-			Instant retryAt = claim.attempts() >= maxAttempts ? null
-					: now.plus(baseBackoff.multipliedBy(1L << (claim.attempts() - 1)));
-			tx.executeWithoutResult(s -> deliveries.record(claim, result, retryAt));
+		for (Claim claim : claim()) {
+			if (deliver(claim)) {
+				attempted++;
+			}
 		}
-		return claims.size();
+		return attempted;
+	}
+
+	/** Sends and records one claimed delivery; returns false, touching nothing, when its lease has already run out. */
+	boolean deliver(Claim claim) {
+		if (!clock.instant().isBefore(claim.leaseUntil())) {
+			return false; // the row is due again, so it belongs to whoever reclaims it
+		}
+		Result result = send(claim);
+		Instant now = clock.instant();
+		Instant retryAt = claim.attempts() >= maxAttempts ? null
+				: now.plus(baseBackoff.multipliedBy(1L << (claim.attempts() - 1)));
+		tx.executeWithoutResult(s -> deliveries.record(claim, result, retryAt));
+		return true;
 	}
 
 	List<Claim> claim() {
