@@ -59,7 +59,7 @@ something agreed in detail:
 
 One repository, two deployables, split because they scale and fail differently:
 
-- **booking-api** — handles requests. Must be fast and always answer.
+- **api** — handles requests. Must be fast and always answer.
 - **worker** — consumes events. Talks to slow, unreliable things (payment
   provider, webhook receivers) and retries them.
 
@@ -87,7 +87,8 @@ Shared infrastructure:
 5. **Notify.** The worker posts `booking.confirmed` and `booking.expired` to
    the organizer's registered webhook URL, signed with HMAC. Failures retry
    with exponential backoff, then go to a dead-letter table. A delivery log
-   is readable through the API.
+   is readable through the API. Deliveries are queued in Postgres in the same
+   transaction as the outcome rather than sent through Kafka.
 
 ## Milestones
 
