@@ -13,7 +13,7 @@ No performance numbers are published. They will arrive with the milestone 4 load
 
 ## Run it
 
-You need Java 21 and Docker with the Compose plugin. This setup is machine-local: Postgres and Kafka run in containers and the app runs on your machine.
+You need Java 21 and Docker with the Compose plugin. This setup is machine-local: Postgres and Kafka run in containers and the app runs on your machine. Postgres and Kafka must be up (`docker compose up -d`) before you start the app.
 
 ```
 docker compose up -d
@@ -91,7 +91,7 @@ Retry behaviour is set in `SettlementKafkaConfig` and tested in [`SettlementRetr
 - An unexpected settlement failure blocks its Kafka partition until it clears. There is no dead-letter topic.
 - The provider lookup in `failUnsettled` can race a charge that is still in flight on a real provider. The fake provider has no such window.
 
-Each of these is marked with a `shortcut:` comment in the code that says when to upgrade it.
+The last five limits above are each marked with a `shortcut:` comment in the code that says when to upgrade it. The fake provider and the missing refunds are not.
 
 ## Design
 
