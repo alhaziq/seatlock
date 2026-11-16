@@ -10,6 +10,7 @@ import dev.seatlock.booking.hold.DuplicateSeatsException;
 import dev.seatlock.booking.hold.SeatsUnavailableException;
 import dev.seatlock.booking.payment.HoldNotPayableException;
 import dev.seatlock.booking.payment.IdempotencyKeyConflictException;
+import dev.seatlock.booking.webhook.DeliveryNotRetryableException;
 import dev.seatlock.booking.webhook.InvalidWebhookUrlException;
 
 // Extends the base handler so bean-validation failures (MethodArgumentNotValidException) and a missing or
@@ -45,6 +46,11 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(InvalidWebhookUrlException.class)
 	ProblemDetail invalidWebhookUrl(InvalidWebhookUrlException e) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+	}
+
+	@ExceptionHandler(DeliveryNotRetryableException.class)
+	ProblemDetail deliveryNotRetryable(DeliveryNotRetryableException e) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
 	}
 
 }

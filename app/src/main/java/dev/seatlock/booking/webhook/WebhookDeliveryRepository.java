@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -96,6 +97,60 @@ class WebhookDeliveryRepository {
 				.params(UUID.randomUUID(), claim.id(), utc(result.attemptedAt()), result.statusCode(), result.error(),
 						result.responseBody(), result.durationMs(), claim.id())
 				.update();
+	}
+
+	private static final String DELIVERY_COLUMNS = """
+			id, type, hold_id, payload, status, attempts, next_attempt_at, created_at, delivered_at""";
+
+	private static WebhookDelivery delivery(java.sql.ResultSet rs, int n) throws java.sql.SQLException {
+		return new WebhookDelivery(rs.getObject("id", UUID.class), rs.getString("type"),
+				rs.getObject("hold_id", UUID.class), rs.getString("payload"),
+				DeliveryStatus.valueOf(rs.getString("status")), rs.getInt("attempts"),
+				rs.getObject("next_attempt_at", OffsetDateTime.class).toInstant(),
+				rs.getObject("created_at", OffsetDateTime.class).toInstant(),
+				Optional.ofNullable(rs.getObject("delivered_at", OffsetDateTime.class)).map(OffsetDateTime::toInstant)
+						.orElse(null));
+	}
+
+	/** The organizer's newest deliveries (at most {@code limit}), optionally only those in {@code status}. */
+	List<WebhookDelivery> list(UUID organizerId, DeliveryStatus status, int limit) {
+		return jdbc.sql("select " + DELIVERY_COLUMNS + """
+				  from webhook_deliveries
+				 where organizer_id = ? and (?::text is null or status = ?)
+				 order by created_at desc, id
+				 limit ?""")
+				.params(organizerId, status == null ? null : status.name(), status == null ? null : status.name(), limit)
+				.query(WebhookDeliveryRepository::delivery).list();
+	}
+
+	Optional<WebhookDelivery> find(UUID organizerId, UUID id) {
+		return jdbc.sql("select " + DELIVERY_COLUMNS + " from webhook_deliveries where id = ? and organizer_id = ?")
+				.params(id, organizerId).query(WebhookDeliveryRepository::delivery).optional();
+	}
+
+	List<WebhookAttempt> attempts(UUID deliveryId) {
+		return jdbc.sql("""
+				select attempt, attempted_at, status_code, error, response_body, duration_ms
+				  from webhook_attempts where delivery_id = ? order by attempt""")
+				.param(deliveryId)
+				.query((rs, n) -> new WebhookAttempt(rs.getInt("attempt"),
+						rs.getObject("attempted_at", OffsetDateTime.class).toInstant(),
+						rs.getObject("status_code", Integer.class), rs.getString("error"),
+						rs.getString("response_body"), rs.getLong("duration_ms")))
+				.list();
+	}
+
+	/**
+	 * Puts a DEAD delivery back to PENDING, due now, in one conditional update so a concurrent retry cannot
+	 * double-apply. Empty when the delivery is missing, someone else's, or not DEAD.
+	 */
+	Optional<WebhookDelivery> retryDead(UUID organizerId, UUID id, Instant now) {
+		return jdbc.sql("""
+				update webhook_deliveries
+				   set status = 'PENDING', attempts = 0, next_attempt_at = ?
+				 where id = ? and organizer_id = ? and status = 'DEAD'
+				returning """ + " " + DELIVERY_COLUMNS)
+				.params(utc(now), id, organizerId).query(WebhookDeliveryRepository::delivery).optional();
 	}
 
 	private static OffsetDateTime utc(Instant instant) {
