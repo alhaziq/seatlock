@@ -86,7 +86,7 @@ class SettlementRetryTest {
 	}
 
 	private UUID settlesAfterFiveFailures() {
-		Event event = events.createEvent("Launch Night", clock.instant().plus(Duration.ofDays(30)), 1, 2500, "MYR");
+		Event event = events.createEvent("Launch Night", clock.instant().plus(Duration.ofDays(30)), 1, 2500, "MYR", UUID.randomUUID());
 		List<UUID> seatIds = events.listSeats(event.id()).stream().map(Seat::id).toList();
 		Hold hold = holds.createHold(event.id(), UUID.randomUUID(), seatIds);
 		RestClient client = RestClient.builder().baseUrl("http://localhost:" + port).build();

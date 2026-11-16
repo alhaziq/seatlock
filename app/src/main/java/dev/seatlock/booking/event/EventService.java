@@ -27,12 +27,12 @@ public class EventService {
 
 	@Transactional
 	public Event createEvent(String name, Instant startsAt, int seatCount, long priceCents,
-			String currency) {
+			String currency, UUID organizerId) {
 		UUID id = UUID.randomUUID();
 		jdbc.sql("""
-				insert into events (id, name, starts_at, price_cents, currency, created_at)
-				values (?, ?, ?, ?, ?, ?)""")
-				.params(id, name, utc(startsAt), priceCents, currency, utc(clock.instant())).update();
+				insert into events (id, name, starts_at, price_cents, currency, created_at, organizer_id)
+				values (?, ?, ?, ?, ?, ?, ?)""")
+				.params(id, name, utc(startsAt), priceCents, currency, utc(clock.instant()), organizerId).update();
 		// One statement inserts all seats, labelled "1".."N".
 		jdbc.sql("""
 				insert into seats (id, event_id, label, status)
@@ -43,7 +43,7 @@ public class EventService {
 
 	public Event getEvent(UUID id) {
 		return jdbc.sql("""
-				select e.id, e.name, e.starts_at, e.price_cents, e.currency,
+				select e.id, e.name, e.starts_at, e.price_cents, e.currency, e.organizer_id,
 				       (select count(*) from seats s where s.event_id = e.id) as total,
 				       (select count(*) from seats s where s.event_id = e.id and s.status = 'AVAILABLE') as available
 				from events e where e.id = ?""")
@@ -51,7 +51,7 @@ public class EventService {
 				.query((rs, i) -> new Event(rs.getObject("id", UUID.class), rs.getString("name"),
 						rs.getObject("starts_at", OffsetDateTime.class).toInstant(), rs.getLong("price_cents"),
 						rs.getString("currency"), rs.getInt("total"),
-						rs.getInt("available")))
+						rs.getInt("available"), rs.getObject("organizer_id", UUID.class)))
 				.optional().orElseThrow(() -> new NotFoundException("Event " + id + " not found"));
 	}
 

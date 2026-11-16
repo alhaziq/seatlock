@@ -32,3 +32,12 @@ seatlock:
     enabled: true
     retry-backoff: PT1S
     max-retries: 3
+  webhooks:
+    enabled: true
+    interval: PT1S
+    batch-size: 20
+    lease: PT1M
+    max-attempts: 6
+    base-backoff: PT10S
+    allow-http: false
+    allow-private-addresses: false

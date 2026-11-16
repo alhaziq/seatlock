@@ -37,7 +37,8 @@ public @interface IntegrationTest {
 	/** Background jobs and the listener are off unless a test replaces these; {@code {}} lets profile files decide. */
 	@AliasFor(annotation = SpringBootTest.class, attribute = "properties")
 	String[] properties() default { "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false",
-			"seatlock.settlement.enabled=false" };
+			"seatlock.settlement.enabled=false", "seatlock.webhooks.enabled=false",
+			"seatlock.webhooks.allow-http=true", "seatlock.webhooks.allow-private-addresses=true" };
 
 	@TestConfiguration(proxyBeanMethods = false)
 	class TestClockConfig {
@@ -65,7 +66,7 @@ public @interface IntegrationTest {
 		}
 
 		private static void truncate(ApplicationContext ctx) {
-			ctx.getBean(JdbcClient.class).sql("truncate events, seats, holds, payments, outbox, ledger_entries cascade").update();
+			ctx.getBean(JdbcClient.class).sql("truncate events, seats, holds, payments, outbox, ledger_entries, webhook_endpoints, webhook_deliveries, webhook_attempts cascade").update();
 		}
 
 	}

@@ -3,3 +3,5 @@ seatlock:
     enabled: false
   settlement:
     enabled: false
+  webhooks:
+    enabled: false

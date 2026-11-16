@@ -241,7 +241,7 @@ class SettlementTest {
 
 	private Payment pendingPayment(long priceCents, int seatCount) {
 		Event event = events.createEvent("Launch Night", clock.instant().plus(Duration.ofDays(30)), seatCount,
-				priceCents, "MYR");
+				priceCents, "MYR", UUID.randomUUID());
 		UUID userId = UUID.randomUUID();
 		var hold = holds.createHold(event.id(), userId,
 				events.listSeats(event.id()).stream().map(Seat::id).toList());

@@ -137,7 +137,7 @@ class PaymentFlowTest {
 
 	private Hold holdOneSeat(long priceCents) {
 		Event event = events.createEvent("Launch Night", clock.instant().plus(Duration.ofDays(30)), 1, priceCents,
-				"MYR");
+				"MYR", UUID.randomUUID());
 		List<UUID> seatIds = events.listSeats(event.id()).stream().map(Seat::id).toList();
 		return holds.createHold(event.id(), UUID.randomUUID(), seatIds);
 	}

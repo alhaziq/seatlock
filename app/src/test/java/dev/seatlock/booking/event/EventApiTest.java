@@ -35,7 +35,7 @@ class EventApiTest {
 	}
 
 	private RestClient.ResponseSpec post(String name, int seatCount, long priceCents, String currency) {
-		return client().post().uri("/events")
+		return client().post().uri("/events").header("X-User-Id", UUID.randomUUID().toString())
 				.body(Map.of("name", name, "startsAt", "2027-01-01T20:00:00Z", "seatCount", seatCount,
 						"priceCents", priceCents, "currency", currency))
 				.retrieve();
@@ -98,6 +98,27 @@ class EventApiTest {
 	@ValueSource(strings = { "", "my", "myr", "MYRR" })
 	void badCurrencyIs400(String currency) {
 		assertProblem(post("Launch Night", 3, 2500, currency), HttpStatus.BAD_REQUEST);
+	}
+
+	@Test
+	void createEventRequiresUserId() {
+		assertProblem(client().post().uri("/events")
+				.body(Map.of("name", "Launch Night", "startsAt", "2027-01-01T20:00:00Z", "seatCount", 3,
+						"priceCents", 2500, "currency", "MYR"))
+				.retrieve(), HttpStatus.BAD_REQUEST);
+	}
+
+	@Test
+	void createEventRecordsOrganizer() {
+		UUID u = UUID.randomUUID();
+		ResponseEntity<Event> res = client().post().uri("/events").header("X-User-Id", u.toString())
+				.body(Map.of("name", "Launch Night", "startsAt", "2027-01-01T20:00:00Z", "seatCount", 3,
+						"priceCents", 2500, "currency", "MYR"))
+				.retrieve().toEntity(Event.class);
+		assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+		assertThat(res.getBody().organizerId()).isEqualTo(u);
+		Event got = client().get().uri("/events/{id}", res.getBody().id()).retrieve().body(Event.class);
+		assertThat(got.organizerId()).isEqualTo(u);
 	}
 
 }

@@ -45,7 +45,7 @@ class PayConcurrencyTest {
 
 	@Test
 	void twentySimultaneousPaysWithOneKeyMakeOnePayment() {
-		Event event = events.createEvent("Launch Night", clock.instant().plus(Duration.ofDays(30)), 3, 2500, "MYR");
+		Event event = events.createEvent("Launch Night", clock.instant().plus(Duration.ofDays(30)), 3, 2500, "MYR", UUID.randomUUID());
 		UUID userId = UUID.randomUUID();
 		Hold hold = holds.createHold(event.id(), userId,
 				events.listSeats(event.id()).stream().map(Seat::id).limit(2).toList());

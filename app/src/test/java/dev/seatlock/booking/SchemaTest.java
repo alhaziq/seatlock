@@ -30,4 +30,12 @@ class SchemaTest {
 		assertThat(tables).contains("payments", "outbox", "ledger_entries");
 	}
 
+	@Test
+	void migrationCreatesWebhookTables() {
+		List<String> tables = jdbc.sql("""
+				select table_name from information_schema.tables
+				where table_schema = 'public'""").query(String.class).list();
+		assertThat(tables).contains("webhook_endpoints", "webhook_deliveries", "webhook_attempts");
+	}
+
 }

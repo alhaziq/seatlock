@@ -38,7 +38,7 @@ class HoldExpiryTest {
 	Clock clock;
 
 	private Event event(int seatCount) {
-		return events.createEvent("Launch Night", clock.instant().plus(Duration.ofDays(30)), seatCount, 2500, "MYR");
+		return events.createEvent("Launch Night", clock.instant().plus(Duration.ofDays(30)), seatCount, 2500, "MYR", UUID.randomUUID());
 	}
 
 	private List<Seat> seats(Event event) {
