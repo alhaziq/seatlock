@@ -7,6 +7,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import dev.seatlock.booking.webhook.WebhookEvents;
+
 @Service
 public class SettlementService {
 
@@ -16,13 +18,16 @@ public class SettlementService {
 
 	private final PaymentProvider provider;
 
+	private final WebhookEvents webhooks;
+
 	private final Clock clock;
 
 	SettlementService(SettlementRepository settlements, LedgerRepository ledger, PaymentProvider provider,
-			Clock clock) {
+			WebhookEvents webhooks, Clock clock) {
 		this.settlements = settlements;
 		this.ledger = ledger;
 		this.provider = provider;
+		this.webhooks = webhooks;
 		this.clock = clock;
 	}
 
@@ -63,6 +68,9 @@ public class SettlementService {
 				settlements.markSucceeded(payment.id(), now);
 				ledger.postPayment(payment.id(), payment.eventId(), payment.amountCents(), payment.currency(), now);
 				settlements.confirmHold(payment.holdId());
+				webhooks.bookingConfirmed(payment.holdId(), payment.eventId(), payment.userId(),
+						settlements.seatIds(payment.holdId()), payment.id(), payment.amountCents(),
+						payment.currency());
 			}
 			case ChargeResult.Declined declined -> {
 				settlements.markFailed(payment.id(), declined.reason(), now);

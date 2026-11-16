@@ -47,22 +47,34 @@ class HoldRepository {
 				.param("holdId", holdId).param("seatIds", seatIds).update();
 	}
 
+	record ExpiredHold(UUID holdId, UUID eventId, UUID userId, List<UUID> seatIds) {
+	}
+
 	/**
 	 * One statement, so a hold and its seats expire together; a concurrent sweep waits for the other
-	 * transaction, then re-checks status = 'ACTIVE' and leaves rows already expired alone.
+	 * transaction, then re-checks status = 'ACTIVE' and leaves rows already expired alone. The seat ids are read
+	 * in a CTE, which sees the seats as they were before {@code released} clears them.
 	 */
-	int expireHolds(Instant now) {
+	List<ExpiredHold> expireHolds(Instant now) {
 		return jdbc.sql("""
 				with expired as (
 				    update holds set status = 'EXPIRED'
 				     where status = 'ACTIVE' and expires_at <= ?
-				 returning id
+				 returning id, event_id, user_id
+				), held as (
+				    select hold_id, array_agg(id order by label::int) as seat_ids
+				      from seats where hold_id in (select id from expired) group by hold_id
 				), released as (
 				    update seats set status = 'AVAILABLE', hold_id = null
 				     where hold_id in (select id from expired)
 				)
-				select count(*) from expired""")
-				.param(utc(now)).query(Integer.class).single();
+				select e.id, e.event_id, e.user_id, coalesce(h.seat_ids, '{}') as seat_ids
+				  from expired e left join held h on h.hold_id = e.id""")
+				.param(utc(now))
+				.query((rs, i) -> new ExpiredHold(rs.getObject("id", UUID.class),
+						rs.getObject("event_id", UUID.class), rs.getObject("user_id", UUID.class),
+						List.of((UUID[]) rs.getArray("seat_ids").getArray())))
+				.list();
 	}
 
 	Optional<Hold> findHold(UUID id) {

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import dev.seatlock.booking.NotFoundException;
 import dev.seatlock.booking.event.EventService;
+import dev.seatlock.booking.webhook.WebhookEvents;
 
 @Service
 public class HoldService {
@@ -21,14 +22,17 @@ public class HoldService {
 
 	private final EventService events;
 
+	private final WebhookEvents webhooks;
+
 	private final Clock clock;
 
 	private final Duration holdDuration;
 
-	HoldService(HoldRepository holds, EventService events, Clock clock,
+	HoldService(HoldRepository holds, EventService events, WebhookEvents webhooks, Clock clock,
 			@Value("${seatlock.hold-duration}") Duration holdDuration) {
 		this.holds = holds;
 		this.events = events;
+		this.webhooks = webhooks;
 		this.clock = clock;
 		this.holdDuration = holdDuration;
 	}
@@ -58,8 +62,11 @@ public class HoldService {
 	}
 
 	/** Expires every ACTIVE hold past its expiry and frees its seats; returns how many holds expired. */
+	@Transactional
 	public int releaseExpired() {
-		return holds.expireHolds(clock.instant());
+		var expired = holds.expireHolds(clock.instant());
+		expired.forEach(h -> webhooks.bookingExpired(h.holdId(), h.eventId(), h.userId(), h.seatIds()));
+		return expired.size();
 	}
 
 }

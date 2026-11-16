@@ -3,6 +3,7 @@ package dev.seatlock.booking.settlement;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,21 +19,26 @@ class SettlementRepository {
 		this.jdbc = jdbc;
 	}
 
-	record LockedPayment(UUID id, UUID holdId, UUID eventId, String status, long amountCents, String currency) {
+	record LockedPayment(UUID id, UUID holdId, UUID eventId, UUID userId, String status, long amountCents, String currency) {
 	}
 
 	/** Locks the payment row; a concurrent or repeated settlement waits here, then sees the committed status. */
 	Optional<LockedPayment> lockPayment(UUID id) {
 		return jdbc.sql("""
-				select p.id, p.hold_id, h.event_id, p.status, p.amount_cents, p.currency
+				select p.id, p.hold_id, h.event_id, h.user_id, p.status, p.amount_cents, p.currency
 				  from payments p join holds h on h.id = p.hold_id
 				 where p.id = ?
 				   for update of p""")
 				.param(id)
 				.query((rs, i) -> new LockedPayment(rs.getObject("id", UUID.class),
 						rs.getObject("hold_id", UUID.class), rs.getObject("event_id", UUID.class),
-						rs.getString("status"), rs.getLong("amount_cents"), rs.getString("currency")))
+						rs.getObject("user_id", UUID.class), rs.getString("status"), rs.getLong("amount_cents"), rs.getString("currency")))
 				.optional();
+	}
+
+	List<UUID> seatIds(UUID holdId) {
+		return jdbc.sql("select id from seats where hold_id = ? order by label::int").param(holdId)
+				.query(UUID.class).list();
 	}
 
 	void markSucceeded(UUID id, Instant now) {
