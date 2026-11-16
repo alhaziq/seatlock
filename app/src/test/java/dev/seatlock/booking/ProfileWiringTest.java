@@ -22,6 +22,8 @@ class ProfileWiringTest {
 
 	private static final String LISTENER = "paymentRequestedListener";
 
+	private static final String WEBHOOKS = "webhookDispatchJob";
+
 	@Nested
 	@IntegrationTest(properties = {})
 	@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
@@ -35,6 +37,7 @@ class ProfileWiringTest {
 			assertThat(context.containsBean(EXPIRY)).isTrue();
 			assertThat(context.containsBean(RELAY)).isTrue();
 			assertThat(context.containsBean(LISTENER)).isTrue();
+			assertThat(context.containsBean(WEBHOOKS)).isTrue();
 		}
 
 	}
@@ -56,6 +59,7 @@ class ProfileWiringTest {
 			assertThat(context.containsBean(RELAY)).isTrue();
 			assertThat(context.containsBean(LISTENER)).isFalse();
 			assertThat(context.containsBean(EXPIRY)).isFalse();
+			assertThat(context.containsBean(WEBHOOKS)).isFalse();
 			assertThat(RestClient.create("http://localhost:" + port).get().uri("/actuator/health").retrieve()
 					.toBodilessEntity().getStatusCode()).isEqualTo(HttpStatus.OK);
 		}
@@ -76,6 +80,7 @@ class ProfileWiringTest {
 			assertThat(context.containsBean(LISTENER)).isTrue();
 			assertThat(context.containsBean(EXPIRY)).isTrue();
 			assertThat(context.containsBean(RELAY)).isFalse();
+			assertThat(context.containsBean(WEBHOOKS)).isTrue();
 			assertThat(context).isNotInstanceOf(WebServerApplicationContext.class);
 		}
 
