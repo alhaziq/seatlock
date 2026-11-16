@@ -161,11 +161,14 @@ class WebhookDeliveryApiTest {
 	@Test
 	void otherOrganizersDeliveryIs404() throws Exception {
 		try (var receiver = new TestReceiver()) {
-			UUID id = deliveryFor(UUID.randomUUID(), receiver.url());
+			UUID owner = UUID.randomUUID();
+			UUID id = deliveryFor(owner, receiver.url());
+			deadLetter(receiver);
 			UUID other = UUID.randomUUID();
 
 			assertProblem(get(other, "/webhook-deliveries/" + id), HttpStatus.NOT_FOUND);
 			assertProblem(retry(other, id), HttpStatus.NOT_FOUND);
+			assertThat(get(owner, "/webhook-deliveries/" + id).body(Map.class).get("status")).isEqualTo("DEAD");
 			assertProblem(get(other, "/webhook-deliveries/" + UUID.randomUUID()), HttpStatus.NOT_FOUND);
 		}
 	}
