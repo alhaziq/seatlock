@@ -10,12 +10,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import dev.seatlock.booking.NotFoundException;
+import dev.seatlock.booking.outbox.KafkaTopics;
 import dev.seatlock.booking.outbox.OutboxRepository;
 
 @Service
 public class PaymentService {
 
-	static final String REQUESTED_TOPIC = "payments.requested";
 
 	private static final String KEY_CONSTRAINT = "payments_user_id_idempotency_key_key";
 
@@ -68,7 +68,7 @@ public class PaymentService {
 			}
 			throw e;
 		}
-		outbox.add(REQUESTED_TOPIC, payment.id().toString(), "{\"paymentId\":\"" + payment.id() + "\"}", now);
+		outbox.add(KafkaTopics.PAYMENTS_REQUESTED, payment.id().toString(), "{\"paymentId\":\"" + payment.id() + "\"}", now);
 		return payment;
 	}
 

@@ -156,6 +156,16 @@ class PayApiTest {
 	}
 
 	@Test
+	void blankIdempotencyKeyIs400() {
+		UUID userId = UUID.randomUUID();
+		Hold hold = hold(event(3), userId, 2);
+
+		assertProblem(pay(hold.id(), userId, ""), HttpStatus.BAD_REQUEST);
+		assertProblem(pay(hold.id(), userId, "   "), HttpStatus.BAD_REQUEST);
+		assertThat(count("payments")).isEqualTo(0);
+	}
+
+	@Test
 	void idempotencyKeyOver255CharsIs400() {
 		UUID userId = UUID.randomUUID();
 		Hold hold = hold(event(3), userId, 2);

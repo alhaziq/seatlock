@@ -6,11 +6,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
@@ -21,7 +23,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 /**
  * Boots the app on a random port against the shared Testcontainers Postgres, with a
- * {@link MutableClock} as the primary Clock. Every test starts with empty tables and a reset clock.
+ * {@link MutableClock} as the primary Clock. Every test starts and ends with empty tables and a reset clock.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
@@ -48,13 +50,22 @@ public @interface IntegrationTest {
 
 	}
 
-	class CleanState implements BeforeEachCallback {
+	class CleanState implements BeforeEachCallback, AfterEachCallback {
 
 		@Override
 		public void beforeEach(ExtensionContext context) {
 			var ctx = SpringExtension.getApplicationContext(context);
-			ctx.getBean(JdbcClient.class).sql("truncate events, seats, holds, payments, outbox, ledger_entries cascade").update();
+			truncate(ctx);
 			ctx.getBean(MutableClock.class).reset();
+		}
+
+		@Override
+		public void afterEach(ExtensionContext context) {
+			truncate(SpringExtension.getApplicationContext(context));
+		}
+
+		private static void truncate(ApplicationContext ctx) {
+			ctx.getBean(JdbcClient.class).sql("truncate events, seats, holds, payments, outbox, ledger_entries cascade").update();
 		}
 
 	}
