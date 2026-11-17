@@ -36,6 +36,12 @@ const holdsCreated = new Counter('holds_created');
 const holdsConflicted = new Counter('holds_conflicted');
 const paysOk = new Counter('pays_ok');
 const payReplaysMatched = new Counter('pay_replays_matched');
+const unexpected = new Counter('unexpected_status'); // tagged by step and status, so a failure says what it was
+let logged = 0;
+function note(step, r) {
+  unexpected.add(1, { step, status: String(r.status) });
+  if (logged++ < 3) console.error(`${step} unexpected: ${r.status} ${r.error} ${String(r.body).slice(0, 120)}`);
+}
 
 const json = { 'Content-Type': 'application/json' };
 
@@ -79,7 +85,7 @@ export default function (data) {
     return;
   }
   if (!check(hold, { 'hold 201': (r) => r.status === 201 })) {
-    console.error(`hold failed: ${hold.status} ${hold.error} ${String(hold.body).slice(0, 120)}`);
+    note('hold', hold);
     return;
   }
   holdsCreated.add(1);
@@ -87,11 +93,15 @@ export default function (data) {
   const payHeaders = { ...headers, 'Idempotency-Key': crypto.randomUUID() };
   const url = `${BASE}/holds/${hold.json('id')}/pay`;
   const pay = http.post(url, null, { headers: payHeaders, tags: { name: 'pay' } });
-  if (!check(pay, { 'pay accepted': (r) => r.status === 202 || r.status === 201 || r.status === 200 })) return;
+  if (!check(pay, { 'pay accepted': (r) => r.status === 202 || r.status === 201 || r.status === 200 })) {
+    note('pay', pay);
+    return;
+  }
   paysOk.add(1);
 
   const replay = http.post(url, null, { headers: payHeaders, tags: { name: 'pay_replay' } });
   if (check(replay, {
     'replay same payment id': (r) => (r.status === 200 || r.status === 202) && r.json('id') === pay.json('id'),
   })) payReplaysMatched.add(1);
+  else note('replay', replay);
 }
