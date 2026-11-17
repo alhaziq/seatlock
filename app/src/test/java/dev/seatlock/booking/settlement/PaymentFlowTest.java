@@ -38,7 +38,8 @@ import dev.seatlock.booking.payment.Payment;
 import dev.seatlock.booking.payment.PaymentStatus;
 
 @IntegrationTest(properties = { "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=true",
-		"seatlock.settlement.enabled=true", "seatlock.settlement.retry-backoff=PT0.01S" })
+		"seatlock.settlement.enabled=true", "seatlock.settlement.retry-backoff=PT0.01S", "seatlock.rate-limit.enabled=false",
+		"seatlock.seat-cache.enabled=false" })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @Timeout(120)
 class PaymentFlowTest {

@@ -43,7 +43,8 @@ public @interface IntegrationTest {
 	@AliasFor(annotation = SpringBootTest.class, attribute = "properties")
 	String[] properties() default { "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false",
 			"seatlock.settlement.enabled=false", "seatlock.webhooks.enabled=false",
-			"seatlock.webhooks.allow-http=true", "seatlock.webhooks.allow-private-addresses=true" };
+			"seatlock.webhooks.allow-http=true", "seatlock.webhooks.allow-private-addresses=true",
+			"seatlock.rate-limit.enabled=false", "seatlock.seat-cache.enabled=false" };
 
 	@TestConfiguration(proxyBeanMethods = false)
 	class TestClockConfig {

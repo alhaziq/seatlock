@@ -15,6 +15,7 @@ import dev.seatlock.booking.hold.DuplicateSeatsException;
 import dev.seatlock.booking.hold.SeatsUnavailableException;
 import dev.seatlock.booking.payment.HoldNotPayableException;
 import dev.seatlock.booking.payment.IdempotencyKeyConflictException;
+import dev.seatlock.booking.ratelimit.RateLimitExceededException;
 import dev.seatlock.booking.webhook.DeliveryNotRetryableException;
 import dev.seatlock.booking.webhook.InvalidWebhookUrlException;
 
@@ -37,6 +38,13 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 	private static ResponseEntity<ProblemDetail> withBearerChallenge(HttpStatus status, String detail) {
 		return ResponseEntity.status(status).header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
 				.body(ProblemDetail.forStatusAndDetail(status, detail));
+	}
+
+	@ExceptionHandler(RateLimitExceededException.class)
+	ResponseEntity<ProblemDetail> rateLimited(RateLimitExceededException e) {
+		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+				.header(HttpHeaders.RETRY_AFTER, String.valueOf(e.retryAfterSeconds()))
+				.body(ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, e.getMessage()));
 	}
 
 	@ExceptionHandler(UsernameTakenException.class)

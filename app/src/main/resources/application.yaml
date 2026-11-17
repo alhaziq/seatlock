@@ -3,6 +3,11 @@ spring:
     url: jdbc:postgresql://localhost:5432/seatlock
     username: seatlock
     password: seatlock
+  data:
+    redis:
+      # short, so a dead Redis costs a request about a second before the limiter and cache fail open
+      timeout: 500ms
+      connect-timeout: 500ms
   kafka:
     bootstrap-servers: localhost:9092
     producer:
@@ -24,6 +29,11 @@ seatlock:
   auth:
     # jwt-secret has no default: set SEATLOCK_AUTH_JWT_SECRET (at least 32 bytes, used as-is as the HS256 key)
     token-ttl: PT1H
+  rate-limit:
+    enabled: true
+  seat-cache:
+    enabled: true
+    ttl: PT1S
   hold-duration: PT5M
   expiry:
     interval: PT5S

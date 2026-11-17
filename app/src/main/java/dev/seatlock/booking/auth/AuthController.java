@@ -2,6 +2,7 @@ package dev.seatlock.booking.auth;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import dev.seatlock.booking.ratelimit.RateLimiter;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
@@ -46,7 +49,11 @@ class AuthController {
 
 	private final Clock clock;
 
-	AuthController(UserRepository users, PasswordEncoder passwordEncoder, TokenService tokens, Clock clock) {
+	private final RateLimiter rateLimiter;
+
+	AuthController(UserRepository users, PasswordEncoder passwordEncoder, TokenService tokens, Clock clock,
+			RateLimiter rateLimiter) {
+		this.rateLimiter = rateLimiter;
 		this.users = users;
 		this.passwordEncoder = passwordEncoder;
 		this.tokens = tokens;
@@ -65,6 +72,7 @@ class AuthController {
 	/** Unknown user and wrong password fail identically, so the response does not reveal which usernames exist. */
 	@PostMapping("/auth/login")
 	TokenResponse login(@Valid @RequestBody Credentials request) {
+		rateLimiter.check("login:" + request.username(), 10, Duration.ofSeconds(60));
 		User user = users.findByUsername(request.username())
 				.filter(u -> passwordEncoder.matches(request.password(), u.passwordHash()))
 				.orElseThrow(() -> new BadCredentialsException("Invalid username or password"));

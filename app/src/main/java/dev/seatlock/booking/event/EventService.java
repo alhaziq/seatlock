@@ -20,9 +20,12 @@ public class EventService {
 
 	private final Clock clock;
 
-	EventService(JdbcClient jdbc, Clock clock) {
+	private final SeatCache seatCache;
+
+	EventService(JdbcClient jdbc, Clock clock, SeatCache seatCache) {
 		this.jdbc = jdbc;
 		this.clock = clock;
+		this.seatCache = seatCache;
 	}
 
 	@Transactional
@@ -56,12 +59,14 @@ public class EventService {
 	}
 
 	public List<Seat> listSeats(UUID eventId) {
-		getEvent(eventId);
-		return jdbc.sql("select id, label, status from seats where event_id = ? order by label::int")
-				.param(eventId)
-				.query((rs, i) -> new Seat(rs.getObject("id", UUID.class), rs.getString("label"),
-						SeatStatus.valueOf(rs.getString("status"))))
-				.list();
+		return seatCache.get(eventId, () -> {
+			getEvent(eventId);
+			return jdbc.sql("select id, label, status from seats where event_id = ? order by label::int")
+					.param(eventId)
+					.query((rs, i) -> new Seat(rs.getObject("id", UUID.class), rs.getString("label"),
+							SeatStatus.valueOf(rs.getString("status"))))
+					.list();
+		});
 	}
 
 	private static OffsetDateTime utc(Instant instant) {

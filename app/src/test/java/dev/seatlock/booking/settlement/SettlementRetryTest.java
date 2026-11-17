@@ -37,7 +37,8 @@ import dev.seatlock.booking.payment.Payment;
 import dev.seatlock.booking.payment.PaymentStatus;
 
 @IntegrationTest(properties = { "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=true",
-		"seatlock.settlement.enabled=true", "seatlock.settlement.retry-backoff=PT1S" })
+		"seatlock.settlement.enabled=true", "seatlock.settlement.retry-backoff=PT1S", "seatlock.rate-limit.enabled=false",
+		"seatlock.seat-cache.enabled=false" })
 @Import(SettlementRetryTest.FlakyProviderConfig.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @Timeout(120)
