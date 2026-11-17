@@ -25,7 +25,7 @@ import dev.seatlock.booking.event.EventService;
 import dev.seatlock.booking.event.Seat;
 
 // Fresh user ids and usernames per test keep these independent of whatever is already in Redis.
-@IntegrationTest(properties = { "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false",
+@IntegrationTest(properties = { "management.server.port=0", "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false",
 		"seatlock.settlement.enabled=false", "seatlock.webhooks.enabled=false", "seatlock.rate-limit.enabled=true",
 		"seatlock.seat-cache.enabled=false" })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)

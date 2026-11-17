@@ -6,8 +6,11 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import dev.seatlock.booking.webhook.WebhookEvents;
+import io.micrometer.core.instrument.MeterRegistry;
 
 @Service
 public class SettlementService {
@@ -22,13 +25,16 @@ public class SettlementService {
 
 	private final Clock clock;
 
+	private final MeterRegistry meters;
+
 	SettlementService(SettlementRepository settlements, LedgerRepository ledger, PaymentProvider provider,
-			WebhookEvents webhooks, Clock clock) {
+			WebhookEvents webhooks, Clock clock, MeterRegistry meters) {
 		this.settlements = settlements;
 		this.ledger = ledger;
 		this.provider = provider;
 		this.webhooks = webhooks;
 		this.clock = clock;
+		this.meters = meters;
 	}
 
 	/**
@@ -63,6 +69,13 @@ public class SettlementService {
 
 	private void finish(SettlementRepository.LockedPayment payment, ChargeResult result) {
 		Instant now = clock.instant();
+		String status = result instanceof ChargeResult.Approved ? "SUCCEEDED" : "FAILED";
+		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+			@Override
+			public void afterCommit() {
+				meters.counter("seatlock.payments.settled", "status", status).increment();
+			}
+		});
 		switch (result) {
 			case ChargeResult.Approved approved -> {
 				settlements.markSucceeded(payment.id(), now);

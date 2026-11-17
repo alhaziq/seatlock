@@ -81,7 +81,9 @@ class SecurityConfig {
 				.httpBasic(basic -> basic.disable())
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(HttpMethod.POST, "/auth/signup", "/auth/login").permitAll()
-						.requestMatchers(HttpMethod.GET, "/events/**", "/actuator/health").permitAll()
+						.requestMatchers(HttpMethod.GET, "/events/**").permitAll()
+						// only health and prometheus are exposed, and only on the management port, which no public route reaches
+						.requestMatchers("/actuator/**").permitAll()
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 						.anyRequest().authenticated())
 				.oauth2ResourceServer(rs -> rs.jwt(Customizer.withDefaults())

@@ -17,6 +17,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.boot.test.web.server.LocalManagementPort;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -47,6 +48,9 @@ class SecurityTest {
 
 	@LocalServerPort
 	int port;
+
+	@LocalManagementPort
+	int managementPort;
 
 	@Autowired
 	JdbcClient jdbc;
@@ -146,7 +150,7 @@ class SecurityTest {
 
 		assertThat(client().get().uri("/events/{id}", event.id()).retrieve().toBodilessEntity().getStatusCode())
 				.isEqualTo(HttpStatus.OK);
-		assertThat(client().get().uri("/actuator/health").retrieve().toBodilessEntity().getStatusCode())
+		assertThat(RestClient.create("http://localhost:" + managementPort).get().uri("/actuator/health").retrieve().toBodilessEntity().getStatusCode())
 				.isEqualTo(HttpStatus.OK);
 	}
 

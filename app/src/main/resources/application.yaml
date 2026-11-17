@@ -25,6 +25,17 @@ spring:
       # commit each offset only after its record is settled, skipped or given up on
       ack-mode: record
 
+management:
+  server:
+    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  metrics:
+    tags:
+      application: seatlock
+
 seatlock:
   auth:
     # jwt-secret has no default: set SEATLOCK_AUTH_JWT_SECRET (at least 32 bytes, used as-is as the HS256 key)

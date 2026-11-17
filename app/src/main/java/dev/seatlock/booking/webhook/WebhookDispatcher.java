@@ -22,6 +22,7 @@ import org.springframework.web.client.RestClient;
 
 import dev.seatlock.booking.webhook.WebhookDeliveryRepository.Claim;
 import dev.seatlock.booking.webhook.WebhookDeliveryRepository.Result;
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * Sends due webhook deliveries. Claim and record are separate short transactions; the HTTP call runs between
@@ -44,6 +45,8 @@ public class WebhookDispatcher {
 
 	private final Clock clock;
 
+	private final MeterRegistry meters;
+
 	private final int batchSize;
 
 	private final Duration lease;
@@ -53,7 +56,7 @@ public class WebhookDispatcher {
 	private final Duration baseBackoff;
 
 	WebhookDispatcher(WebhookDeliveryRepository deliveries, WebhookUrlPolicy urlPolicy, RestClient webhookRestClient,
-			TransactionTemplate tx, Clock clock, @Value("${seatlock.webhooks.batch-size}") int batchSize,
+			TransactionTemplate tx, Clock clock, MeterRegistry meters, @Value("${seatlock.webhooks.batch-size}") int batchSize,
 			@Value("${seatlock.webhooks.lease}") Duration lease,
 			@Value("${seatlock.webhooks.max-attempts}") int maxAttempts,
 			@Value("${seatlock.webhooks.base-backoff}") Duration baseBackoff) {
@@ -62,6 +65,7 @@ public class WebhookDispatcher {
 		this.http = webhookRestClient;
 		this.tx = tx;
 		this.clock = clock;
+		this.meters = meters;
 		this.batchSize = batchSize;
 		this.lease = lease;
 		this.maxAttempts = maxAttempts;
@@ -96,6 +100,8 @@ public class WebhookDispatcher {
 		Instant retryAt = claim.attempts() >= maxAttempts ? null
 				: now.plus(baseBackoff.multipliedBy(1L << (claim.attempts() - 1)));
 		tx.executeWithoutResult(s -> deliveries.record(claim, result, retryAt));
+		meters.counter("seatlock.webhook.attempts", "outcome",
+				result.succeeded() ? "delivered" : retryAt == null ? "dead" : "failed").increment();
 		return true;
 	}
 

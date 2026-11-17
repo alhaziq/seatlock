@@ -28,7 +28,7 @@ import dev.seatlock.booking.event.Seat;
 import dev.seatlock.booking.hold.Hold;
 
 /** Redis is optional: with the limiter and cache on but Redis unreachable, requests behave as if they were off. */
-@IntegrationTest(properties = { "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false",
+@IntegrationTest(properties = { "management.server.port=0", "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false",
 		"seatlock.settlement.enabled=false", "seatlock.webhooks.enabled=false", "seatlock.rate-limit.enabled=true",
 		"seatlock.seat-cache.enabled=true" })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)

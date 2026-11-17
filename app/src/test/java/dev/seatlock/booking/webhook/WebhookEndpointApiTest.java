@@ -89,9 +89,10 @@ class WebhookEndpointApiTest {
 	}
 
 	@Nested
-	@IntegrationTest(properties = { "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false",
+	@IntegrationTest(properties = { "management.server.port=0", "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false",
 			"seatlock.settlement.enabled=false", "seatlock.webhooks.enabled=false",
-			"seatlock.webhooks.allow-http=true", "seatlock.webhooks.allow-private-addresses=false" })
+			"seatlock.webhooks.allow-http=true", "seatlock.webhooks.allow-private-addresses=false",
+			"seatlock.rate-limit.enabled=false", "seatlock.seat-cache.enabled=false" })
 	class PrivateAddressesDisallowed {
 
 		@Test

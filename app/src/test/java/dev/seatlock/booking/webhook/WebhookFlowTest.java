@@ -22,7 +22,7 @@ import dev.seatlock.booking.IntegrationTest;
 import dev.seatlock.booking.MutableClock;
 import dev.seatlock.booking.TestTokens;
 
-@IntegrationTest(properties = { "seatlock.expiry.enabled=true", "seatlock.expiry.interval=PT0.2S",
+@IntegrationTest(properties = { "management.server.port=0", "seatlock.expiry.enabled=true", "seatlock.expiry.interval=PT0.2S",
 		"seatlock.outbox.enabled=true", "seatlock.settlement.enabled=true", "seatlock.settlement.retry-backoff=PT0.01S",
 		"seatlock.webhooks.enabled=true", "seatlock.webhooks.interval=PT0.2S", "seatlock.webhooks.allow-http=true",
 		"seatlock.webhooks.allow-private-addresses=true", "seatlock.rate-limit.enabled=false",

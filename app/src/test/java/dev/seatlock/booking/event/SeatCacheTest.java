@@ -19,7 +19,7 @@ import dev.seatlock.booking.MutableClock;
 import dev.seatlock.booking.hold.HoldService;
 
 // A fresh event id per test means a fresh cache key, whatever Redis already holds.
-@IntegrationTest(properties = { "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false",
+@IntegrationTest(properties = { "management.server.port=0", "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false",
 		"seatlock.settlement.enabled=false", "seatlock.webhooks.enabled=false", "seatlock.rate-limit.enabled=false",
 		"seatlock.seat-cache.enabled=true" })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)

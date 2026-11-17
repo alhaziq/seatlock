@@ -1,6 +1,7 @@
-spring:
-  main:
-    web-application-type: none
+management:
+  metrics:
+    tags:
+      application: seatlock-worker
 
 seatlock:
   outbox:

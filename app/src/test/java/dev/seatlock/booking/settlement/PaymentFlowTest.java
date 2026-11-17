@@ -37,7 +37,7 @@ import dev.seatlock.booking.hold.HoldStatus;
 import dev.seatlock.booking.payment.Payment;
 import dev.seatlock.booking.payment.PaymentStatus;
 
-@IntegrationTest(properties = { "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=true",
+@IntegrationTest(properties = { "management.server.port=0", "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=true",
 		"seatlock.settlement.enabled=true", "seatlock.settlement.retry-backoff=PT0.01S", "seatlock.rate-limit.enabled=false",
 		"seatlock.seat-cache.enabled=false" })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)

@@ -10,10 +10,13 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import dev.seatlock.booking.NotFoundException;
 import dev.seatlock.booking.event.EventService;
 import dev.seatlock.booking.webhook.WebhookEvents;
+import io.micrometer.core.instrument.MeterRegistry;
 
 @Service
 public class HoldService {
@@ -26,20 +29,40 @@ public class HoldService {
 
 	private final Clock clock;
 
+	private final MeterRegistry meters;
+
 	private final Duration holdDuration;
 
-	HoldService(HoldRepository holds, EventService events, WebhookEvents webhooks, Clock clock,
+	HoldService(HoldRepository holds, EventService events, WebhookEvents webhooks, Clock clock, MeterRegistry meters,
 			@Value("${seatlock.hold-duration}") Duration holdDuration) {
 		this.holds = holds;
 		this.events = events;
 		this.webhooks = webhooks;
 		this.clock = clock;
+		this.meters = meters;
 		this.holdDuration = holdDuration;
 	}
 
 	/** Lock, insert and update run in one transaction; any failure rolls all of it back. */
 	@Transactional
 	public Hold createHold(UUID eventId, UUID userId, List<UUID> seatIds) {
+		try {
+			Hold hold = insertHold(eventId, userId, seatIds);
+			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+				@Override
+				public void afterCommit() {
+					meters.counter("seatlock.holds", "outcome", "created").increment();
+				}
+			});
+			return hold;
+		}
+		catch (SeatsUnavailableException e) {
+			meters.counter("seatlock.holds", "outcome", "unavailable").increment();
+			throw e;
+		}
+	}
+
+	private Hold insertHold(UUID eventId, UUID userId, List<UUID> seatIds) {
 		if (new HashSet<>(seatIds).size() != seatIds.size()) {
 			throw new DuplicateSeatsException();
 		}

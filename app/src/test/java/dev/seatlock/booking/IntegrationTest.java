@@ -41,7 +41,7 @@ public @interface IntegrationTest {
 
 	/** Background jobs and the listener are off unless a test replaces these; {@code {}} lets profile files decide. */
 	@AliasFor(annotation = SpringBootTest.class, attribute = "properties")
-	String[] properties() default { "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false",
+	String[] properties() default { "management.server.port=0", "seatlock.expiry.enabled=false", "seatlock.outbox.enabled=false",
 			"seatlock.settlement.enabled=false", "seatlock.webhooks.enabled=false",
 			"seatlock.webhooks.allow-http=true", "seatlock.webhooks.allow-private-addresses=true",
 			"seatlock.rate-limit.enabled=false", "seatlock.seat-cache.enabled=false" };

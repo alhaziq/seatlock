@@ -5,3 +5,7 @@ seatlock:
     enabled: false
   webhooks:
     enabled: false
+management:
+  metrics:
+    tags:
+      application: seatlock-api
