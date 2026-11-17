@@ -1,4 +1,5 @@
-FROM eclipse-temurin:21-jdk AS build
+# Build once on the runner's own arch; the jar is the same for every platform.
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk AS build
 WORKDIR /src
 COPY app/.mvn .mvn
 COPY app/mvnw app/pom.xml ./
