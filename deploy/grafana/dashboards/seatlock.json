@@ -115,7 +115,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "seatlock_outbox_unpublished",
+          "expr": "max(seatlock_outbox_unpublished)",
           "legendFormat": "unpublished"
         }
       ],
@@ -169,7 +169,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "seatlock_webhook_pending",
+          "expr": "max(seatlock_webhook_pending)",
           "legendFormat": "pending"
         }
       ],

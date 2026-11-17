@@ -41,6 +41,9 @@ class AuthController {
 	record TokenResponse(String accessToken, String tokenType, long expiresIn) {
 	}
 
+	/** Verified against when the user is missing, so unknown usernames cost the same BCrypt time as wrong passwords. */
+	private final String dummyHash;
+
 	private final UserRepository users;
 
 	private final PasswordEncoder passwordEncoder;
@@ -56,6 +59,7 @@ class AuthController {
 		this.rateLimiter = rateLimiter;
 		this.users = users;
 		this.passwordEncoder = passwordEncoder;
+		this.dummyHash = passwordEncoder.encode("dummy-password");
 		this.tokens = tokens;
 		this.clock = clock;
 	}
@@ -69,13 +73,18 @@ class AuthController {
 		return new SignupResponse(user.id(), user.username());
 	}
 
-	/** Unknown user and wrong password fail identically, so the response does not reveal which usernames exist. */
+	/**
+	 * Unknown user and wrong password fail with the same response and the same BCrypt cost, so login does not reveal
+	 * which usernames exist by detail or timing. Signup's 409 does, by design.
+	 */
 	@PostMapping("/auth/login")
 	TokenResponse login(@Valid @RequestBody Credentials request) {
 		rateLimiter.check("login:" + request.username(), 10, Duration.ofSeconds(60));
-		User user = users.findByUsername(request.username())
-				.filter(u -> passwordEncoder.matches(request.password(), u.passwordHash()))
-				.orElseThrow(() -> new BadCredentialsException("Invalid username or password"));
+		User user = users.findByUsername(request.username()).orElse(null);
+		boolean ok = passwordEncoder.matches(request.password(), user == null ? dummyHash : user.passwordHash());
+		if (user == null || !ok) {
+			throw new BadCredentialsException("Invalid username or password");
+		}
 		return new TokenResponse(tokens.issue(user.id()), "Bearer", tokens.ttl().toSeconds());
 	}
 

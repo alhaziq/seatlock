@@ -6,6 +6,7 @@ import java.time.Clock;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -80,6 +81,8 @@ class SecurityConfig {
 				.formLogin(form -> form.disable())
 				.httpBasic(basic -> basic.disable())
 				.authorizeHttpRequests(auth -> auth
+						// without this an unhandled exception on a public endpoint is re-dispatched to /error and shows as 401
+						.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
 						.requestMatchers(HttpMethod.POST, "/auth/signup", "/auth/login").permitAll()
 						.requestMatchers(HttpMethod.GET, "/events/**").permitAll()
 						// only health and prometheus are exposed, and only on the management port, which no public route reaches

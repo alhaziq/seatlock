@@ -1,0 +1,33 @@
+== mutation A (fresh copy): double-sell. Second CONFIRMED hold for a booked seat, SUCCEEDED payment, balanced ledger; seats.hold_id still points at the first hold
+INSERT 0 2
+ guard: event exists, 100 seats, >= 1 confirmed hold | t      | events=1, seats=100, confirmed holds=101
+ booked seats <= 100 and = seats of confirmed holds | t      | booked=100, seats in confirmed holds=100, booked seats in confirmed holds=100
+ every confirmed hold owns a booked seat | f      | confirmed holds without a booked seat=1
+ no seat in two confirmed holds [guaranteed by seats.hold_id, single column] | t      | seats appearing in more than one confirmed hold=0
+ one succeeded payment per confirmed hold, none for others | t      | violating holds=0
+ at most one payment per (user, idempotency key) [guaranteed by unique(user_id, idempotency_key)] | t      | duplicated keys=0
+ ledger balanced per payment | t      | unbalanced payments=0
+ no PENDING payments left | t      | pending=0
+== mutation B (fresh copy): +1 cent on one ledger credit
+UPDATE 1
+ guard: event exists, 100 seats, >= 1 confirmed hold | t      | events=1, seats=100, confirmed holds=100
+ booked seats <= 100 and = seats of confirmed holds | t      | booked=100, seats in confirmed holds=100, booked seats in confirmed holds=100
+ every confirmed hold owns a booked seat | t      | confirmed holds without a booked seat=0
+ no seat in two confirmed holds [guaranteed by seats.hold_id, single column] | t      | seats appearing in more than one confirmed hold=0
+ one succeeded payment per confirmed hold, none for others | t      | violating holds=0
+ at most one payment per (user, idempotency key) [guaranteed by unique(user_id, idempotency_key)] | t      | duplicated keys=0
+ ledger balanced per payment | f      | unbalanced payments=1
+ no PENDING payments left | t      | pending=0
+== mutation C (fresh copy): CONFIRMED hold with no payment and no seat
+INSERT 0 1
+ guard: event exists, 100 seats, >= 1 confirmed hold | t      | events=1, seats=100, confirmed holds=101
+ booked seats <= 100 and = seats of confirmed holds | t      | booked=100, seats in confirmed holds=100, booked seats in confirmed holds=100
+ every confirmed hold owns a booked seat | f      | confirmed holds without a booked seat=1
+ no seat in two confirmed holds [guaranteed by seats.hold_id, single column] | t      | seats appearing in more than one confirmed hold=0
+ one succeeded payment per confirmed hold, none for others | f      | violating holds=1
+ at most one payment per (user, idempotency key) [guaranteed by unique(user_id, idempotency_key)] | t      | duplicated keys=0
+ ledger balanced per payment | t      | unbalanced payments=0
+ no PENDING payments left | t      | pending=0
+== second SUCCEEDED payment on the same hold
+ERROR:  duplicate key value violates unique constraint "payments_hold_id_key"
+DETAIL:  Key (hold_id)=(b29aac32-f51b-4e43-a463-0a3fd4cdca28) already exists.

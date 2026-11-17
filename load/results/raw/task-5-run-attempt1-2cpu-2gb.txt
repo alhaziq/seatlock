@@ -1,0 +1,219 @@
+Tue Nov 17 09:54:04 +08 2026
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: load/hold-rush.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 500 max VUs, 10m30s max duration (incl. graceful stop):
+              * rush: 10000 iterations shared among 500 VUs (maxDuration: 10m0s, gracefulStop: 30s)
+
+time="2026-11-17T09:54:04+08:00" level=info msg="EVENT_ID=c49506a8-b957-429a-8b92-2ddba56065f2" source=console
+
+running (00m01.0s), 500/500 VUs, 0 complete and 0 interrupted iterations
+rush   [   0% ] 500 VUs  00m00.7s/10m0s  00000/10000 shared iters
+
+running (00m02.0s), 500/500 VUs, 28 complete and 0 interrupted iterations
+rush   [   0% ] 500 VUs  00m01.7s/10m0s  00028/10000 shared iters
+
+running (00m03.0s), 500/500 VUs, 82 complete and 0 interrupted iterations
+rush   [   1% ] 500 VUs  00m02.7s/10m0s  00082/10000 shared iters
+
+running (00m04.0s), 500/500 VUs, 171 complete and 0 interrupted iterations
+rush   [   2% ] 500 VUs  00m03.7s/10m0s  00171/10000 shared iters
+
+running (00m05.0s), 500/500 VUs, 336 complete and 0 interrupted iterations
+rush   [   3% ] 500 VUs  00m04.7s/10m0s  00337/10000 shared iters
+
+running (00m06.0s), 500/500 VUs, 400 complete and 0 interrupted iterations
+rush   [   4% ] 500 VUs  00m05.7s/10m0s  00400/10000 shared iters
+
+running (00m07.0s), 500/500 VUs, 505 complete and 0 interrupted iterations
+rush   [   5% ] 500 VUs  00m06.7s/10m0s  00505/10000 shared iters
+
+running (00m08.0s), 500/500 VUs, 630 complete and 0 interrupted iterations
+rush   [   6% ] 500 VUs  00m07.7s/10m0s  00630/10000 shared iters
+
+running (00m09.0s), 500/500 VUs, 770 complete and 0 interrupted iterations
+rush   [   8% ] 500 VUs  00m08.7s/10m0s  00770/10000 shared iters
+
+running (00m10.0s), 500/500 VUs, 961 complete and 0 interrupted iterations
+rush   [  10% ] 500 VUs  00m09.7s/10m0s  00961/10000 shared iters
+
+running (00m11.0s), 500/500 VUs, 1147 complete and 0 interrupted iterations
+rush   [  11% ] 500 VUs  00m10.7s/10m0s  01147/10000 shared iters
+
+running (00m12.0s), 500/500 VUs, 1387 complete and 0 interrupted iterations
+rush   [  14% ] 500 VUs  00m11.7s/10m0s  01387/10000 shared iters
+
+running (00m13.0s), 500/500 VUs, 1521 complete and 0 interrupted iterations
+rush   [  15% ] 500 VUs  00m12.7s/10m0s  01521/10000 shared iters
+
+running (00m14.0s), 500/500 VUs, 1743 complete and 0 interrupted iterations
+rush   [  17% ] 500 VUs  00m13.7s/10m0s  01743/10000 shared iters
+
+running (00m15.0s), 500/500 VUs, 1972 complete and 0 interrupted iterations
+rush   [  20% ] 500 VUs  00m14.7s/10m0s  01972/10000 shared iters
+
+running (00m16.0s), 500/500 VUs, 2181 complete and 0 interrupted iterations
+rush   [  22% ] 500 VUs  00m15.7s/10m0s  02181/10000 shared iters
+
+running (00m17.0s), 500/500 VUs, 2343 complete and 0 interrupted iterations
+rush   [  23% ] 500 VUs  00m16.7s/10m0s  02343/10000 shared iters
+
+running (00m18.0s), 500/500 VUs, 2490 complete and 0 interrupted iterations
+rush   [  25% ] 500 VUs  00m17.7s/10m0s  02490/10000 shared iters
+
+running (00m19.0s), 500/500 VUs, 2618 complete and 0 interrupted iterations
+rush   [  26% ] 500 VUs  00m18.7s/10m0s  02618/10000 shared iters
+
+running (00m20.0s), 500/500 VUs, 2776 complete and 0 interrupted iterations
+rush   [  28% ] 500 VUs  00m19.7s/10m0s  02776/10000 shared iters
+
+running (00m21.0s), 500/500 VUs, 2948 complete and 0 interrupted iterations
+rush   [  29% ] 500 VUs  00m20.7s/10m0s  02948/10000 shared iters
+
+running (00m22.0s), 500/500 VUs, 3147 complete and 0 interrupted iterations
+rush   [  31% ] 500 VUs  00m21.7s/10m0s  03147/10000 shared iters
+
+running (00m23.0s), 500/500 VUs, 3320 complete and 0 interrupted iterations
+rush   [  33% ] 500 VUs  00m22.7s/10m0s  03320/10000 shared iters
+
+running (00m24.0s), 500/500 VUs, 3505 complete and 0 interrupted iterations
+rush   [  35% ] 500 VUs  00m23.7s/10m0s  03505/10000 shared iters
+
+running (00m25.0s), 500/500 VUs, 3771 complete and 0 interrupted iterations
+rush   [  38% ] 500 VUs  00m24.7s/10m0s  03772/10000 shared iters
+
+running (00m26.0s), 500/500 VUs, 3970 complete and 0 interrupted iterations
+rush   [  40% ] 500 VUs  00m25.7s/10m0s  03970/10000 shared iters
+
+running (00m27.0s), 500/500 VUs, 4145 complete and 0 interrupted iterations
+rush   [  41% ] 500 VUs  00m26.7s/10m0s  04145/10000 shared iters
+
+running (00m28.0s), 500/500 VUs, 4340 complete and 0 interrupted iterations
+rush   [  43% ] 500 VUs  00m27.7s/10m0s  04340/10000 shared iters
+
+running (00m29.0s), 500/500 VUs, 4582 complete and 0 interrupted iterations
+rush   [  46% ] 500 VUs  00m28.7s/10m0s  04582/10000 shared iters
+
+running (00m30.0s), 500/500 VUs, 4910 complete and 0 interrupted iterations
+rush   [  49% ] 500 VUs  00m29.7s/10m0s  04910/10000 shared iters
+
+running (00m31.0s), 500/500 VUs, 5258 complete and 0 interrupted iterations
+rush   [  53% ] 500 VUs  00m30.7s/10m0s  05258/10000 shared iters
+
+running (00m32.0s), 500/500 VUs, 5584 complete and 0 interrupted iterations
+rush   [  56% ] 500 VUs  00m31.7s/10m0s  05584/10000 shared iters
+
+running (00m33.0s), 500/500 VUs, 5745 complete and 0 interrupted iterations
+rush   [  57% ] 500 VUs  00m32.7s/10m0s  05745/10000 shared iters
+
+running (00m34.0s), 500/500 VUs, 5916 complete and 0 interrupted iterations
+rush   [  59% ] 500 VUs  00m33.7s/10m0s  05916/10000 shared iters
+
+running (00m35.0s), 500/500 VUs, 6082 complete and 0 interrupted iterations
+rush   [  61% ] 500 VUs  00m34.7s/10m0s  06082/10000 shared iters
+
+running (00m36.0s), 500/500 VUs, 6249 complete and 0 interrupted iterations
+rush   [  62% ] 500 VUs  00m35.7s/10m0s  06249/10000 shared iters
+
+running (00m37.0s), 500/500 VUs, 6413 complete and 0 interrupted iterations
+rush   [  64% ] 500 VUs  00m36.7s/10m0s  06413/10000 shared iters
+
+running (00m38.0s), 500/500 VUs, 6644 complete and 0 interrupted iterations
+rush   [  66% ] 500 VUs  00m37.7s/10m0s  06644/10000 shared iters
+
+running (00m39.0s), 500/500 VUs, 6950 complete and 0 interrupted iterations
+rush   [  70% ] 500 VUs  00m38.7s/10m0s  06950/10000 shared iters
+
+running (00m40.0s), 500/500 VUs, 7214 complete and 0 interrupted iterations
+rush   [  72% ] 500 VUs  00m39.7s/10m0s  07214/10000 shared iters
+
+running (00m41.0s), 500/500 VUs, 7518 complete and 0 interrupted iterations
+rush   [  75% ] 500 VUs  00m40.7s/10m0s  07518/10000 shared iters
+
+running (00m42.0s), 500/500 VUs, 7797 complete and 0 interrupted iterations
+rush   [  78% ] 500 VUs  00m41.7s/10m0s  07797/10000 shared iters
+
+running (00m43.0s), 500/500 VUs, 8026 complete and 0 interrupted iterations
+rush   [  80% ] 500 VUs  00m42.7s/10m0s  08026/10000 shared iters
+
+running (00m44.0s), 500/500 VUs, 8323 complete and 0 interrupted iterations
+rush   [  83% ] 500 VUs  00m43.7s/10m0s  08323/10000 shared iters
+
+running (00m45.0s), 500/500 VUs, 8570 complete and 0 interrupted iterations
+rush   [  86% ] 500 VUs  00m44.7s/10m0s  08570/10000 shared iters
+
+running (00m46.0s), 500/500 VUs, 8879 complete and 0 interrupted iterations
+rush   [  89% ] 500 VUs  00m45.7s/10m0s  08879/10000 shared iters
+
+running (00m47.0s), 500/500 VUs, 9258 complete and 0 interrupted iterations
+rush   [  93% ] 500 VUs  00m46.7s/10m0s  09258/10000 shared iters
+
+running (00m48.0s), 458/500 VUs, 9542 complete and 0 interrupted iterations
+rush   [  95% ] 500 VUs  00m47.7s/10m0s  09542/10000 shared iters
+
+running (00m49.0s), 154/500 VUs, 9846 complete and 0 interrupted iterations
+rush   [  98% ] 500 VUs  00m48.7s/10m0s  09846/10000 shared iters
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✗ 'rate==1' rate=94.63%
+
+    http_req_duration{name:hold}
+    ✗ 'p(95)<1000' p(95)=4.57s
+
+    http_req_failed
+    ✗ 'rate==0' rate=0.16%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 317    6.432603/s
+    checks_succeeded...: 94.63% 300 out of 317
+    checks_failed......: 5.36%  17 out of 317
+
+    ✗ hold 201
+      ↳  85% — ✓ 100 / ✗ 17
+    ✓ pay accepted
+    ✓ replay same payment id
+
+    CUSTOM
+    holds_conflicted...............: 9883   200.547043/s
+    holds_created..................: 100    2.029212/s
+    pay_replays_matched............: 100    2.029212/s
+    pays_ok........................: 100    2.029212/s
+
+    HTTP
+    http_req_duration..............: avg=2.35s med=2.26s p(90)=4.17s p(95)=4.65s p(99)=6.15s max=7.75s 
+      { expected_response:true }...: avg=2.35s med=2.27s p(90)=4.17s p(95)=4.65s p(99)=6.16s max=7.75s 
+      { name:hold }................: avg=2.32s med=2.25s p(90)=4.13s p(95)=4.57s p(99)=5.83s max=7.75s 
+    http_req_failed................: 0.16%  17 out of 10204
+    http_reqs......................: 10204  207.060814/s
+
+    EXECUTION
+    iteration_duration.............: avg=2.41s med=2.27s p(90)=4.22s p(95)=4.72s p(99)=7.56s max=13.15s
+    iterations.....................: 10000  202.921221/s
+    vus............................: 154    min=154         max=500
+    vus_max........................: 500    min=500         max=500
+
+    NETWORK
+    data_received..................: 4.2 MB 85 kB/s
+    data_sent......................: 3.9 MB 80 kB/s
+
+
+
+
+running (00m49.3s), 000/500 VUs, 10000 complete and 0 interrupted iterations
+rush ✓ [ 100% ] 500 VUs  00m49.0s/10m0s  10000/10000 shared iters
+time="2026-11-17T09:54:53+08:00" level=error msg="thresholds on metrics 'checks, http_req_duration{name:hold}, http_req_failed' have been crossed"
+k6 run load/hold-rush.js  4.32s user 3.13s system 15% cpu 49.660 total

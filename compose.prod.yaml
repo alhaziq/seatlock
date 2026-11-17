@@ -133,7 +133,7 @@ services:
       - caddydata:/data
     depends_on:
       api: {condition: service_healthy}
-      grafana: {condition: service_healthy}
+      grafana: {condition: service_started}
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:2019/config/"]
       interval: 15s

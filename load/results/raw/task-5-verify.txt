@@ -1,0 +1,55 @@
+$ psql -v event_id=5a116329-2205-46e6-86df-bcd56242a35b -f load/verify.sql
+                     check_name                      | passed |                  detail                  
+-----------------------------------------------------+--------+------------------------------------------
+ guard: event exists, 100 seats, >= 1 confirmed hold | t      | events=1, seats=100, confirmed holds=100
+(1 row)
+
+                     check_name                     | passed |                                    detail                                     
+----------------------------------------------------+--------+-------------------------------------------------------------------------------
+ booked seats <= 100 and = seats of confirmed holds | t      | booked=100, seats in confirmed holds=100, booked seats in confirmed holds=100
+(1 row)
+
+               check_name                | passed |                 detail                  
+-----------------------------------------+--------+-----------------------------------------
+ every confirmed hold owns a booked seat | t      | confirmed holds without a booked seat=0
+(1 row)
+
+                                 check_name                                  | passed |                      detail                       
+-----------------------------------------------------------------------------+--------+---------------------------------------------------
+ no seat in two confirmed holds [guaranteed by seats.hold_id, single column] | t      | seats appearing in more than one confirmed hold=0
+(1 row)
+
+                        check_name                         | passed |      detail       
+-----------------------------------------------------------+--------+-------------------
+ one succeeded payment per confirmed hold, none for others | t      | violating holds=0
+(1 row)
+
+                                            check_name                                            | passed |      detail       
+--------------------------------------------------------------------------------------------------+--------+-------------------
+ at most one payment per (user, idempotency key) [guaranteed by unique(user_id, idempotency_key)] | t      | duplicated keys=0
+(1 row)
+
+         check_name          | passed |        detail         
+-----------------------------+--------+-----------------------
+ ledger balanced per payment | t      | unbalanced payments=0
+(1 row)
+
+        check_name        | passed |  detail   
+--------------------------+--------+-----------
+ no PENDING payments left | t      | pending=0
+(1 row)
+
+  status   | count 
+-----------+-------
+ CONFIRMED |   100
+(1 row)
+
+== guard with random uuid
+ guard: event exists, 100 seats, >= 1 confirmed hold | f      | events=0, seats=0, confirmed holds=0
+ booked seats <= 100 and = seats of confirmed holds | t      | booked=0, seats in confirmed holds=0, booked seats in confirmed holds=0
+ every confirmed hold owns a booked seat | t      | confirmed holds without a booked seat=0
+ no seat in two confirmed holds [guaranteed by seats.hold_id, single column] | t      | seats appearing in more than one confirmed hold=0
+ one succeeded payment per confirmed hold, none for others | t      | violating holds=0
+ at most one payment per (user, idempotency key) [guaranteed by unique(user_id, idempotency_key)] | t      | duplicated keys=0
+ ledger balanced per payment | t      | unbalanced payments=0
+ no PENDING payments left | t      | pending=0

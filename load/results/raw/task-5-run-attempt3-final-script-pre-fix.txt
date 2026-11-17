@@ -1,0 +1,60 @@
+Tue Nov 17 10:00:13 +08 2026
+time="2026-11-17T10:00:13+08:00" level=info msg="EVENT_ID=9dd6826e-1738-4087-93dd-6f205a0da238" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    http_req_duration{name:hold}
+    ✓ 'p(99)<60000' p(99)=2.84s
+
+    http_req_duration{name:pay_replay}
+    ✓ 'p(99)<60000' p(99)=3.2s
+
+    http_req_duration{name:pay}
+    ✓ 'p(99)<60000' p(99)=2.48s
+
+    http_req_failed
+    ✓ 'rate==0' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 300     13.786065/s
+    checks_succeeded...: 100.00% 300 out of 300
+    checks_failed......: 0.00%   0 out of 300
+
+    ✓ hold 201
+    ✓ pay accepted
+    ✓ replay same payment id
+
+    CUSTOM
+    holds_conflicted...............: 9900   454.940133/s
+    holds_created..................: 100    4.595355/s
+    pay_replays_matched............: 100    4.595355/s
+    pays_ok........................: 100    4.595355/s
+
+    HTTP
+    http_req_duration..............: avg=1.01s med=845.66ms p(90)=1.96s p(95)=2.5s  p(99)=2.84s max=3.34s
+      { expected_response:true }...: avg=1.01s med=845.66ms p(90)=1.96s p(95)=2.5s  p(99)=2.84s max=3.34s
+      { name:hold }................: avg=1.01s med=838.69ms p(90)=1.96s p(95)=2.5s  p(99)=2.84s max=3.34s
+      { name:pay_replay }..........: avg=1.18s med=1.02s    p(90)=2.6s  p(95)=2.72s p(99)=3.2s  max=3.24s
+      { name:pay }.................: avg=1.32s med=1.25s    p(90)=1.84s p(95)=2.06s p(99)=2.48s max=2.5s 
+    http_req_failed................: 0.00%  0 out of 10204
+    http_reqs......................: 10204  468.910012/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.04s med=852.19ms p(90)=2.09s p(95)=2.58s p(99)=2.98s max=7.28s
+    iterations.....................: 10000  459.535488/s
+    vus............................: 500    min=500        max=500
+    vus_max........................: 500    min=500        max=500
+
+    NETWORK
+    data_received..................: 4.2 MB 191 kB/s
+    data_sent......................: 3.9 MB 181 kB/s
+
+
+
+k6 run --quiet load/hold-rush.js  4.40s user 2.12s system 29% cpu 22.199 total

@@ -1,0 +1,48 @@
+Tue Nov 17 09:57:51 +08 2026
+time="2026-11-17T09:57:52+08:00" level=info msg="EVENT_ID=e09eda6e-8425-4dbd-ab7d-5e1a8f96a16e" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    http_req_failed
+    ✓ 'rate==0' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 300     15.341121/s
+    checks_succeeded...: 100.00% 300 out of 300
+    checks_failed......: 0.00%   0 out of 300
+
+    ✓ hold 201
+    ✓ pay accepted
+    ✓ replay same payment id
+
+    CUSTOM
+    holds_conflicted...............: 9900   506.256978/s
+    holds_created..................: 100    5.113707/s
+    pay_replays_matched............: 100    5.113707/s
+    pays_ok........................: 100    5.113707/s
+
+    HTTP
+    http_req_duration..............: avg=903.35ms med=792.31ms p(90)=1.63s p(95)=1.91s p(99)=2.52s max=3.3s
+      { expected_response:true }...: avg=903.35ms med=792.31ms p(90)=1.63s p(95)=1.91s p(99)=2.52s max=3.3s
+    http_req_failed................: 0.00%  0 out of 10204
+    http_reqs......................: 10204  521.802647/s
+
+    EXECUTION
+    iteration_duration.............: avg=935.26ms med=785.08ms p(90)=1.71s p(95)=2.08s p(99)=3.13s max=6.4s
+    iterations.....................: 10000  511.370685/s
+    vus............................: 446    min=446        max=500
+    vus_max........................: 500    min=500        max=500
+
+    NETWORK
+    data_received..................: 4.1 MB 212 kB/s
+    data_sent......................: 3.9 MB 202 kB/s
+
+
+
+k6 run --quiet load/hold-rush.js  4.30s user 1.80s system 30% cpu 20.011 total

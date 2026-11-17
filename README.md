@@ -4,7 +4,7 @@ Seatlock is a ticket-booking backend built to stay correct under load. The goal 
 
 ## Result
 
-**10,000 buyers, 100 seats: 100 holds created, 9,900 refused with a conflict, 100 payments succeeded, 0 oversold, 0 double charges.** Full numbers are in [`load/results/2026-11-local.md`](load/results/2026-11-local.md); the script is [`load/hold-rush.js`](load/hold-rush.js).
+**10,000 buyers, 100 seats: 100 holds created, 9,900 refused with a conflict, 100 payments succeeded.** In that one local run the database check found 0 oversold and 0 double charges (checked by SQL, below). Buyer tokens are minted inside k6, so login and BCrypt are not in the measured path. Full numbers are in [`load/results/2026-11-local.md`](load/results/2026-11-local.md); the script is [`load/hold-rush.js`](load/hold-rush.js).
 
 | metric | value |
 |---|---|
@@ -42,14 +42,14 @@ With no profile, one process does everything: the web API, the outbox relay, set
 
 ```
 ./mvnw spring-boot:run -Dspring-boot.run.arguments=--spring.profiles.active=api
-./mvnw spring-boot:run -Dspring-boot.run.arguments=--spring.profiles.active=worker
+./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=worker --server.port=8082 --management.server.port=8083"
 ```
 
-The `api` profile serves HTTP and runs the outbox relay. It does not expire holds or settle payments. The `worker` profile settles payments and expires holds. It has no web server and no relay. The worker needs no port, so both can run on one machine.
+The `api` profile serves HTTP and runs the outbox relay. It does not expire holds or settle payments. The `worker` profile settles payments and expires holds. It has no relay. The worker also serves HTTP on 8080 (same JWT security, not publicly routed) and a management port on 8081, so on one machine give it other ports, as in the command below.
 
 Open Swagger UI at http://localhost:8080/swagger-ui.html. The OpenAPI JSON is at `/v3/api-docs`.
 
-To try it from the command line, sign up two users, log in as each, then create an event, read its seats, hold one, pay for the hold, and poll the payment. Every endpoint except signup, login and the `GET /events` reads needs an `Authorization: Bearer` header. An event has a price in cents and a currency.
+To try it from the command line, sign up two users, log in as each, then create an event, read its seats, hold one, pay for the hold, and poll the payment. Every endpoint except signup, login and the `GET /events/{id}` and `GET /events/{id}/seats` reads needs an `Authorization: Bearer` header. An event has a price in cents and a currency.
 
 ```
 # the organizer
@@ -177,7 +177,7 @@ Each process serves Prometheus metrics on port 8081, along with `/actuator/healt
 | `seatlock_webhook_pending` | webhook deliveries still `PENDING` (read from the database on each scrape) |
 | `http_server_requests_seconds` | Spring's request timer, used for hold and pay p95 |
 
-The Grafana dashboard ([`deploy/grafana/dashboards/seatlock.json`](deploy/grafana/dashboards/seatlock.json)) has seven panels: holds per second by outcome, p95 latency of hold and pay, payments settled by status, outbox backlog, webhook attempts by outcome, and pending webhooks. A screenshot is not here yet: the author adds it after the first public deploy.
+The Grafana dashboard ([`deploy/grafana/dashboards/seatlock.json`](deploy/grafana/dashboards/seatlock.json)) has six panels: holds per second by outcome, p95 latency of hold and pay, payments settled by status, outbox backlog, webhook attempts by outcome, and pending webhooks. A screenshot is not here yet: the author adds it after the first public deploy.
 
 ## Deploy
 
@@ -206,6 +206,7 @@ Retry behaviour is set in `SettlementKafkaConfig` and tested in [`SettlementRetr
 - The payment provider is a fake. There is no real provider integration.
 - There are no refunds.
 - The rate limiter uses fixed windows, so a client can send up to twice the limit across a window edge. It is marked with a `shortcut:` comment in `RateLimiter`.
+- The login limit is per username, so anyone can lock a user out of login with 10 bad attempts a minute.
 - Login tokens cannot be revoked and there are no refresh tokens, and signup is not rate limited.
 - The load numbers come from a laptop running k6 and the whole stack together, not from the public VM.
 - Settlement holds the payment row lock during the provider call. This is simple and correct, but a slow provider ties up a database connection.
