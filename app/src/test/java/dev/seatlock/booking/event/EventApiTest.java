@@ -10,6 +10,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
@@ -17,12 +18,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClient;
 
 import dev.seatlock.booking.IntegrationTest;
+import dev.seatlock.booking.TestTokens;
 
 @IntegrationTest
 class EventApiTest {
 
 	@LocalServerPort
 	int port;
+
+	@Autowired
+	TestTokens tokens;
 
 	private RestClient client() {
 		return RestClient.builder().baseUrl("http://localhost:" + port)
@@ -35,7 +40,7 @@ class EventApiTest {
 	}
 
 	private RestClient.ResponseSpec post(String name, int seatCount, long priceCents, String currency) {
-		return client().post().uri("/events").header("X-User-Id", UUID.randomUUID().toString())
+		return client().post().uri("/events").header("Authorization", tokens.bearer(UUID.randomUUID()))
 				.body(Map.of("name", name, "startsAt", "2027-01-01T20:00:00Z", "seatCount", seatCount,
 						"priceCents", priceCents, "currency", currency))
 				.retrieve();
@@ -101,17 +106,17 @@ class EventApiTest {
 	}
 
 	@Test
-	void createEventRequiresUserId() {
+	void createEventWithoutTokenIs401() {
 		assertProblem(client().post().uri("/events")
 				.body(Map.of("name", "Launch Night", "startsAt", "2027-01-01T20:00:00Z", "seatCount", 3,
 						"priceCents", 2500, "currency", "MYR"))
-				.retrieve(), HttpStatus.BAD_REQUEST);
+				.retrieve(), HttpStatus.UNAUTHORIZED);
 	}
 
 	@Test
 	void createEventRecordsOrganizer() {
 		UUID u = UUID.randomUUID();
-		ResponseEntity<Event> res = client().post().uri("/events").header("X-User-Id", u.toString())
+		ResponseEntity<Event> res = client().post().uri("/events").header("Authorization", tokens.bearer(u))
 				.body(Map.of("name", "Launch Night", "startsAt", "2027-01-01T20:00:00Z", "seatCount", 3,
 						"priceCents", 2500, "currency", "MYR"))
 				.retrieve().toEntity(Event.class);

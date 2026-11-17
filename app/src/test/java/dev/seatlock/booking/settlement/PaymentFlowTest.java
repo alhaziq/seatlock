@@ -26,6 +26,7 @@ import org.springframework.web.client.RestClient;
 
 import dev.seatlock.booking.IntegrationTest;
 import dev.seatlock.booking.MutableClock;
+import dev.seatlock.booking.TestTokens;
 import dev.seatlock.booking.event.Event;
 import dev.seatlock.booking.event.EventService;
 import dev.seatlock.booking.event.Seat;
@@ -46,6 +47,11 @@ class PaymentFlowTest {
 
 	@LocalServerPort
 	int port;
+
+	@Autowired
+	TestTokens tokens;
+
+	private final UUID buyer = UUID.randomUUID();
 
 	@Autowired
 	EventService events;
@@ -139,19 +145,20 @@ class PaymentFlowTest {
 		Event event = events.createEvent("Launch Night", clock.instant().plus(Duration.ofDays(30)), 1, priceCents,
 				"MYR", UUID.randomUUID());
 		List<UUID> seatIds = events.listSeats(event.id()).stream().map(Seat::id).toList();
-		return holds.createHold(event.id(), UUID.randomUUID(), seatIds);
+		return holds.createHold(event.id(), buyer, seatIds);
 	}
 
 	private ResponseEntity<Payment> pay(Hold hold) {
 		return client().post().uri("/holds/{id}/pay", hold.id())
-				.header("X-User-Id", hold.userId().toString())
+				.header("Authorization", tokens.bearer(hold.userId()))
 				.header("Idempotency-Key", UUID.randomUUID().toString())
 				.retrieve().toEntity(Payment.class);
 	}
 
 	private Payment awaitStatus(UUID paymentId, PaymentStatus status) {
 		return await().atMost(Duration.ofSeconds(15))
-				.until(() -> client().get().uri("/payments/{id}", paymentId).retrieve().body(Payment.class),
+				.until(() -> client().get().uri("/payments/{id}", paymentId)
+						.header("Authorization", tokens.bearer(buyer)).retrieve().body(Payment.class),
 						p -> p.status() == status);
 	}
 

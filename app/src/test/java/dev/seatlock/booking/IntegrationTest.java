@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.AliasFor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 /**
@@ -29,10 +30,14 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import(IntegrationTest.TestClockConfig.class)
+@Import({ IntegrationTest.TestClockConfig.class, TestTokens.class })
+@TestPropertySource(properties = "seatlock.auth.jwt-secret=" + IntegrationTest.JWT_SECRET)
 @ContextConfiguration(initializers = TestcontainersConfiguration.class)
 @ExtendWith(IntegrationTest.CleanState.class)
 public @interface IntegrationTest {
+
+	/** Fixed HS256 secret (32+ bytes); set outside {@link #properties()} so {@code properties = {}} keeps it. */
+	String JWT_SECRET = "test-secret-test-secret-test-secret!";
 
 	/** Background jobs and the listener are off unless a test replaces these; {@code {}} lets profile files decide. */
 	@AliasFor(annotation = SpringBootTest.class, attribute = "properties")
@@ -66,7 +71,7 @@ public @interface IntegrationTest {
 		}
 
 		private static void truncate(ApplicationContext ctx) {
-			ctx.getBean(JdbcClient.class).sql("truncate events, seats, holds, payments, outbox, ledger_entries, webhook_endpoints, webhook_deliveries, webhook_attempts cascade").update();
+			ctx.getBean(JdbcClient.class).sql("truncate users, events, seats, holds, payments, outbox, ledger_entries, webhook_endpoints, webhook_deliveries, webhook_attempts cascade").update();
 		}
 
 	}

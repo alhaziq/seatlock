@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import dev.seatlock.booking.auth.CurrentUser;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -24,14 +26,14 @@ class PaymentController {
 
 	@PostMapping("/holds/{id}/pay")
 	@ResponseStatus(HttpStatus.ACCEPTED)
-	Payment pay(@PathVariable UUID id, @RequestHeader("X-User-Id") UUID userId,
+	Payment pay(@PathVariable UUID id, @CurrentUser UUID userId,
 			@RequestHeader("Idempotency-Key") @NotBlank @Size(max = 255) String idempotencyKey) {
 		return payments.requestPayment(id, userId, idempotencyKey);
 	}
 
 	@GetMapping("/payments/{id}")
-	Payment get(@PathVariable UUID id) {
-		return payments.getPayment(id);
+	Payment get(@PathVariable UUID id, @CurrentUser UUID userId) {
+		return payments.getPayment(id, userId);
 	}
 
 }

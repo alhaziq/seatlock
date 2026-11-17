@@ -76,4 +76,10 @@ public class PaymentService {
 		return payments.findById(id).orElseThrow(() -> new NotFoundException("Payment " + id + " not found"));
 	}
 
+	/** Someone else's payment is reported exactly like a missing one. */
+	public Payment getPayment(UUID id, UUID userId) {
+		return payments.findById(id, userId)
+				.orElseThrow(() -> new NotFoundException("Payment " + id + " not found"));
+	}
+
 }

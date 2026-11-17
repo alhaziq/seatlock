@@ -49,6 +49,11 @@ class PaymentRepository {
 				.param(id).query(PaymentRepository::map).optional();
 	}
 
+	Optional<Payment> findById(UUID id, UUID userId) {
+		return jdbc.sql("select " + COLUMNS + " from payments where id = ? and user_id = ?")
+				.params(id, userId).query(PaymentRepository::map).optional();
+	}
+
 	record Price(long amountCents, String currency) {
 	}
 

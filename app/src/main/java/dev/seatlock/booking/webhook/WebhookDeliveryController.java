@@ -8,11 +8,11 @@ import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import dev.seatlock.booking.NotFoundException;
+import dev.seatlock.booking.auth.CurrentUser;
 
 @RestController
 class WebhookDeliveryController {
@@ -49,18 +49,18 @@ class WebhookDeliveryController {
 	}
 
 	@GetMapping("/webhook-deliveries")
-	List<Summary> list(@RequestHeader("X-User-Id") UUID organizerId,
+	List<Summary> list(@CurrentUser UUID organizerId,
 			@RequestParam(required = false) DeliveryStatus status) {
 		return deliveries.list(organizerId, status, LIST_LIMIT).stream().map(Summary::of).toList();
 	}
 
 	@GetMapping("/webhook-deliveries/{id}")
-	Detail get(@RequestHeader("X-User-Id") UUID organizerId, @PathVariable UUID id) {
+	Detail get(@CurrentUser UUID organizerId, @PathVariable UUID id) {
 		return Detail.of(find(organizerId, id), deliveries.attempts(id));
 	}
 
 	@PostMapping("/webhook-deliveries/{id}/retry")
-	Detail retry(@RequestHeader("X-User-Id") UUID organizerId, @PathVariable UUID id) {
+	Detail retry(@CurrentUser UUID organizerId, @PathVariable UUID id) {
 		WebhookDelivery retried = deliveries.retryDead(organizerId, id, clock.instant()).orElse(null);
 		if (retried == null) {
 			find(organizerId, id); // 404 when missing or not ours

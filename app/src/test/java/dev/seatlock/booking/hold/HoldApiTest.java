@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClient;
 
 import dev.seatlock.booking.IntegrationTest;
+import dev.seatlock.booking.TestTokens;
 import dev.seatlock.booking.event.Event;
 import dev.seatlock.booking.event.EventService;
 import dev.seatlock.booking.event.Seat;
@@ -28,6 +29,9 @@ class HoldApiTest {
 
 	@LocalServerPort
 	int port;
+
+	@Autowired
+	TestTokens tokens;
 
 	@Autowired
 	EventService events;
@@ -56,7 +60,7 @@ class HoldApiTest {
 
 	private RestClient.ResponseSpec hold(UUID eventId, UUID userId, List<UUID> seatIds) {
 		return client().post().uri("/events/{id}/holds", eventId)
-				.header("X-User-Id", userId.toString())
+				.header("Authorization", tokens.bearer(userId))
 				.body(Map.of("seatIds", seatIds))
 				.retrieve();
 	}
@@ -129,16 +133,16 @@ class HoldApiTest {
 	}
 
 	@Test
-	void missingUserHeaderIs400() {
+	void missingOrMalformedTokenIs401() {
 		Event event = event(3);
 		RestClient.ResponseSpec missing = client().post().uri("/events/{id}/holds", event.id())
 				.body(Map.of("seatIds", List.of(seatIds(event).get(0)))).retrieve();
 		RestClient.ResponseSpec malformed = client().post().uri("/events/{id}/holds", event.id())
-				.header("X-User-Id", "not-a-uuid")
+				.header("Authorization", "Bearer not-a-jwt")
 				.body(Map.of("seatIds", List.of(seatIds(event).get(0)))).retrieve();
 
-		assertProblem(missing, HttpStatus.BAD_REQUEST);
-		assertProblem(malformed, HttpStatus.BAD_REQUEST);
+		assertProblem(missing, HttpStatus.UNAUTHORIZED);
+		assertProblem(malformed, HttpStatus.UNAUTHORIZED);
 		assertThat(statuses(event)).containsOnly(SeatStatus.AVAILABLE);
 	}
 
@@ -149,7 +153,8 @@ class HoldApiTest {
 		UUID userId = UUID.randomUUID();
 		Hold created = hold(event.id(), userId, List.of(seats.get(2), seats.get(0))).body(Hold.class);
 
-		ResponseEntity<Hold> res = client().get().uri("/holds/{id}", created.id()).retrieve().toEntity(Hold.class);
+		ResponseEntity<Hold> res = client().get().uri("/holds/{id}", created.id())
+				.header("Authorization", tokens.bearer(userId)).retrieve().toEntity(Hold.class);
 
 		assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
 		assertThat(res.getBody().eventId()).isEqualTo(event.id());
@@ -161,7 +166,8 @@ class HoldApiTest {
 
 	@Test
 	void unknownHoldIs404() {
-		assertProblem(client().get().uri("/holds/{id}", UUID.randomUUID()).retrieve(), HttpStatus.NOT_FOUND);
+		assertProblem(client().get().uri("/holds/{id}", UUID.randomUUID())
+				.header("Authorization", tokens.bearer(UUID.randomUUID())).retrieve(), HttpStatus.NOT_FOUND);
 	}
 
 	@Test

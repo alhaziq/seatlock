@@ -21,6 +21,9 @@ spring:
       ack-mode: record
 
 seatlock:
+  auth:
+    # jwt-secret has no default: set SEATLOCK_AUTH_JWT_SECRET (at least 32 bytes, used as-is as the HS256 key)
+    token-ttl: PT1H
   hold-duration: PT5M
   expiry:
     interval: PT5S

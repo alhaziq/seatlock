@@ -18,6 +18,7 @@ import org.springframework.web.client.RestClient;
 
 import dev.seatlock.booking.IntegrationTest;
 import dev.seatlock.booking.MutableClock;
+import dev.seatlock.booking.TestTokens;
 import dev.seatlock.booking.event.Event;
 import dev.seatlock.booking.event.EventService;
 import dev.seatlock.booking.event.Seat;
@@ -31,6 +32,9 @@ class PayApiTest {
 
 	@LocalServerPort
 	int port;
+
+	@Autowired
+	TestTokens tokens;
 
 	@Autowired
 	EventService events;
@@ -61,7 +65,7 @@ class PayApiTest {
 
 	private RestClient.ResponseSpec pay(UUID holdId, UUID userId, String key) {
 		return client().post().uri("/holds/{id}/pay", holdId)
-				.header("X-User-Id", userId.toString())
+				.header("Authorization", tokens.bearer(userId))
 				.header("Idempotency-Key", key)
 				.retrieve();
 	}
@@ -150,7 +154,7 @@ class PayApiTest {
 		UUID userId = UUID.randomUUID();
 		Hold hold = hold(event(3), userId, 2);
 
-		assertProblem(client().post().uri("/holds/{id}/pay", hold.id()).header("X-User-Id", userId.toString())
+		assertProblem(client().post().uri("/holds/{id}/pay", hold.id()).header("Authorization", tokens.bearer(userId))
 				.retrieve(), HttpStatus.BAD_REQUEST);
 		assertThat(count("payments")).isEqualTo(0);
 	}
@@ -206,7 +210,8 @@ class PayApiTest {
 		Hold hold = hold(event(3), userId, 2);
 		Payment created = pay(hold.id(), userId, "k1").body(Payment.class);
 
-		ResponseEntity<Payment> res = client().get().uri("/payments/{id}", created.id()).retrieve()
+		ResponseEntity<Payment> res = client().get().uri("/payments/{id}", created.id())
+				.header("Authorization", tokens.bearer(userId)).retrieve()
 				.toEntity(Payment.class);
 
 		assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -215,7 +220,8 @@ class PayApiTest {
 
 	@Test
 	void unknownPaymentIs404() {
-		assertProblem(client().get().uri("/payments/{id}", UUID.randomUUID()).retrieve(), HttpStatus.NOT_FOUND);
+		assertProblem(client().get().uri("/payments/{id}", UUID.randomUUID())
+				.header("Authorization", tokens.bearer(UUID.randomUUID())).retrieve(), HttpStatus.NOT_FOUND);
 	}
 
 }

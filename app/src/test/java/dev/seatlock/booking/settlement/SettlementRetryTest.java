@@ -26,6 +26,7 @@ import org.springframework.web.client.RestClient;
 
 import dev.seatlock.booking.IntegrationTest;
 import dev.seatlock.booking.MutableClock;
+import dev.seatlock.booking.TestTokens;
 import dev.seatlock.booking.event.Event;
 import dev.seatlock.booking.event.EventService;
 import dev.seatlock.booking.event.Seat;
@@ -44,6 +45,9 @@ class SettlementRetryTest {
 
 	@LocalServerPort
 	int port;
+
+	@Autowired
+	TestTokens tokens;
 
 	@Autowired
 	EventService events;
@@ -92,13 +96,14 @@ class SettlementRetryTest {
 		RestClient client = RestClient.builder().baseUrl("http://localhost:" + port).build();
 
 		UUID paymentId = client.post().uri("/holds/{id}/pay", hold.id())
-				.header("X-User-Id", hold.userId().toString())
+				.header("Authorization", tokens.bearer(hold.userId()))
 				.header("Idempotency-Key", UUID.randomUUID().toString())
 				.retrieve().body(Payment.class).id();
 
 		// max-retries is 3, so reaching SUCCEEDED after 5 failures proves the record was not skipped.
 		await().atMost(Duration.ofSeconds(15))
-				.until(() -> client.get().uri("/payments/{id}", paymentId).retrieve().body(Payment.class),
+				.until(() -> client.get().uri("/payments/{id}", paymentId)
+						.header("Authorization", tokens.bearer(hold.userId())).retrieve().body(Payment.class),
 						p -> p.status() == PaymentStatus.SUCCEEDED);
 		assertThat(holds.getHold(hold.id()).status()).isEqualTo(HoldStatus.CONFIRMED);
 		assertThat(jdbc.sql("select count(*) from ledger_entries where payment_id = ?").param(paymentId)

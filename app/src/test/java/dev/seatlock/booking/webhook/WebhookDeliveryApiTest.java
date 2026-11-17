@@ -18,6 +18,7 @@ import org.springframework.web.client.RestClient;
 
 import dev.seatlock.booking.IntegrationTest;
 import dev.seatlock.booking.MutableClock;
+import dev.seatlock.booking.TestTokens;
 import dev.seatlock.booking.event.Event;
 import dev.seatlock.booking.event.EventService;
 import dev.seatlock.booking.event.Seat;
@@ -29,6 +30,9 @@ class WebhookDeliveryApiTest {
 
 	@LocalServerPort
 	int port;
+
+	@Autowired
+	TestTokens tokens;
 
 	@Autowired
 	EventService events;
@@ -72,7 +76,7 @@ class WebhookDeliveryApiTest {
 	}
 
 	private RestClient.ResponseSpec get(UUID organizer, String uri) {
-		return client().get().uri(uri).header("X-User-Id", organizer.toString()).retrieve();
+		return client().get().uri(uri).header("Authorization", tokens.bearer(organizer)).retrieve();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -81,7 +85,7 @@ class WebhookDeliveryApiTest {
 	}
 
 	private RestClient.ResponseSpec retry(UUID organizer, UUID id) {
-		return client().post().uri("/webhook-deliveries/{id}/retry", id).header("X-User-Id", organizer.toString())
+		return client().post().uri("/webhook-deliveries/{id}/retry", id).header("Authorization", tokens.bearer(organizer))
 				.retrieve();
 	}
 

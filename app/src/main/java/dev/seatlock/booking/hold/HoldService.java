@@ -61,6 +61,12 @@ public class HoldService {
 		return holds.findHold(id).orElseThrow(() -> new NotFoundException("Hold " + id + " not found"));
 	}
 
+	/** Someone else's hold is reported exactly like a missing one. */
+	public Hold getHold(UUID id, UUID userId) {
+		return holds.findHold(id).filter(h -> h.userId().equals(userId))
+				.orElseThrow(() -> new NotFoundException("Hold " + id + " not found"));
+	}
+
 	/** Expires every ACTIVE hold past its expiry and frees its seats; returns how many holds expired. */
 	@Transactional
 	public int releaseExpired() {

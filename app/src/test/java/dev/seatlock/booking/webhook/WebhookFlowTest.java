@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dev.seatlock.booking.IntegrationTest;
 import dev.seatlock.booking.MutableClock;
+import dev.seatlock.booking.TestTokens;
 
 @IntegrationTest(properties = { "seatlock.expiry.enabled=true", "seatlock.expiry.interval=PT0.2S",
 		"seatlock.outbox.enabled=true", "seatlock.settlement.enabled=true", "seatlock.settlement.retry-backoff=PT0.01S",
@@ -31,6 +32,9 @@ class WebhookFlowTest {
 
 	@LocalServerPort
 	int port;
+
+	@Autowired
+	TestTokens tokens;
 
 	@Autowired
 	MutableClock clock;
@@ -47,7 +51,7 @@ class WebhookFlowTest {
 			String secret = register(receiver);
 			JsonNode hold = holdSeats(1);
 
-			client().post().uri("/holds/{id}/pay", hold.get("id").asText()).header("X-User-Id", buyer.toString())
+			client().post().uri("/holds/{id}/pay", hold.get("id").asText()).header("Authorization", tokens.bearer(buyer))
 					.header("Idempotency-Key", UUID.randomUUID().toString()).retrieve().toBodilessEntity();
 
 			await().atMost(Duration.ofSeconds(30)).until(() -> !receiver.requests().isEmpty());
@@ -66,7 +70,7 @@ class WebhookFlowTest {
 
 			await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
 				JsonNode list = json.readTree(client().get().uri("/webhook-deliveries?status=DELIVERED")
-						.header("X-User-Id", organizer.toString()).retrieve().body(String.class));
+						.header("Authorization", tokens.bearer(organizer)).retrieve().body(String.class));
 				assertThat(list).hasSize(1);
 				assertThat(list.get(0).get("id").asText()).isEqualTo(body.get("id").asText());
 			});
@@ -93,13 +97,13 @@ class WebhookFlowTest {
 
 	/** Registers the receiver as the organizer's endpoint and returns the secret. */
 	private String register(TestReceiver receiver) throws Exception {
-		return json.readTree(client().put().uri("/webhook-endpoint").header("X-User-Id", organizer.toString())
+		return json.readTree(client().put().uri("/webhook-endpoint").header("Authorization", tokens.bearer(organizer))
 				.body(Map.of("url", receiver.url())).retrieve().body(String.class)).get("secret").asText();
 	}
 
 	/** Creates a fresh event for the organizer and holds {@code count} seats for the buyer. */
 	private JsonNode holdSeats(int count) throws Exception {
-		JsonNode event = json.readTree(client().post().uri("/events").header("X-User-Id", organizer.toString())
+		JsonNode event = json.readTree(client().post().uri("/events").header("Authorization", tokens.bearer(organizer))
 				.body(Map.of("name", "Launch Night", "startsAt", clock.instant().plus(Duration.ofDays(30)).toString(),
 						"seatCount", count, "priceCents", 2500, "currency", "MYR"))
 				.retrieve().body(String.class));
@@ -107,7 +111,7 @@ class WebhookFlowTest {
 				client().get().uri("/events/{id}/seats", event.get("id").asText()).retrieve().body(String.class));
 		List<String> seatIds = seats.findValuesAsText("id");
 		return json.readTree(client().post().uri("/events/{id}/holds", event.get("id").asText())
-				.header("X-User-Id", buyer.toString()).body(Map.of("seatIds", seatIds)).retrieve().body(String.class));
+				.header("Authorization", tokens.bearer(buyer)).body(Map.of("seatIds", seatIds)).retrieve().body(String.class));
 	}
 
 	private RestClient client() {

@@ -16,12 +16,16 @@ import org.springframework.web.client.RestClient;
 
 import dev.seatlock.booking.IntegrationTest;
 import dev.seatlock.booking.MutableClock;
+import dev.seatlock.booking.TestTokens;
 
 @IntegrationTest
 class WebhookEndpointApiTest {
 
 	@LocalServerPort
 	int port;
+
+	@Autowired
+	TestTokens tokens;
 
 	@Autowired
 	MutableClock clock;
@@ -33,7 +37,7 @@ class WebhookEndpointApiTest {
 	}
 
 	private RestClient.ResponseSpec put(UUID user, String url) {
-		return client().put().uri("/webhook-endpoint").header("X-User-Id", user.toString())
+		return client().put().uri("/webhook-endpoint").header("Authorization", tokens.bearer(user))
 				.body(Map.of("url", url)).retrieve();
 	}
 
@@ -62,21 +66,21 @@ class WebhookEndpointApiTest {
 	void getNeverReturnsSecret() {
 		UUID user = UUID.randomUUID();
 		put(user, "https://example.com/hook").toBodilessEntity();
-		Map<String, Object> body = client().get().uri("/webhook-endpoint").header("X-User-Id", user.toString()).retrieve()
+		Map<String, Object> body = client().get().uri("/webhook-endpoint").header("Authorization", tokens.bearer(user)).retrieve()
 				.body(Map.class);
 		assertThat(body.keySet()).containsExactlyInAnyOrder("url", "createdAt", "updatedAt");
 	}
 
 	@Test
 	void getWithoutEndpointIs404() {
-		assertProblem(client().get().uri("/webhook-endpoint").header("X-User-Id", UUID.randomUUID().toString())
+		assertProblem(client().get().uri("/webhook-endpoint").header("Authorization", tokens.bearer(UUID.randomUUID()))
 				.retrieve(), HttpStatus.NOT_FOUND);
 	}
 
 	@Test
-	void putRequiresUserId() {
+	void putWithoutTokenIs401() {
 		assertProblem(client().put().uri("/webhook-endpoint").body(Map.of("url", "https://example.com/h"))
-				.retrieve(), HttpStatus.BAD_REQUEST);
+				.retrieve(), HttpStatus.UNAUTHORIZED);
 	}
 
 	@Test
