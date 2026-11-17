@@ -1,0 +1,9 @@
+{$SEATLOCK_DOMAIN} {
+	handle /grafana/* {
+		reverse_proxy grafana:3000
+	}
+	# only the api is public; the worker also serves HTTP but is not routed
+	handle {
+		reverse_proxy api:8080
+	}
+}
