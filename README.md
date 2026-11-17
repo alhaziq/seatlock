@@ -45,7 +45,7 @@ With no profile, one process does everything: the web API, the outbox relay, set
 ./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=worker --server.port=8082 --management.server.port=8083"
 ```
 
-The `api` profile serves HTTP and runs the outbox relay. It does not expire holds or settle payments. The `worker` profile settles payments and expires holds. It has no relay. The worker also serves HTTP on 8080 (same JWT security, not publicly routed) and a management port on 8081, so on one machine give it other ports, as in the command below.
+The `api` profile serves HTTP and runs the outbox relay. It does not expire holds or settle payments. The `worker` profile settles payments and expires holds. It has no relay. The worker also serves HTTP on 8080 (same JWT security, not publicly routed) and a management port on 8081, so on one machine give it other ports, as in the worker command above.
 
 Open Swagger UI at http://localhost:8080/swagger-ui.html. The OpenAPI JSON is at `/v3/api-docs`.
 
