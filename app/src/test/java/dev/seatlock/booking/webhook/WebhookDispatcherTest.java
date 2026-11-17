@@ -58,6 +58,9 @@ class WebhookDispatcherTest {
 	TransactionTemplate tx;
 
 	@Autowired
+	io.micrometer.core.instrument.MeterRegistry meters;
+
+	@Autowired
 	JdbcClient jdbc;
 
 	@Autowired
@@ -101,6 +104,23 @@ class WebhookDispatcherTest {
 	private Instant nextAttemptAt(UUID id) {
 		return jdbc.sql("select next_attempt_at from webhook_deliveries where id = ?").param(id)
 				.query(OffsetDateTime.class).single().toInstant();
+	}
+
+	@Test
+	void attemptNotCountedWhenRecordIsANoOp() throws Exception {
+		try (var receiver = new TestReceiver()) {
+			UUID id = one(receiver);
+			var counter = meters.counter("seatlock.webhook.attempts", "outcome", "delivered");
+			double before = counter.count();
+			var claim = dispatcher.claim().get(0);
+			// another replica reclaimed and finished the row while this one was sending
+			jdbc.sql("update webhook_deliveries set status = 'DELIVERED', delivered_at = now() where id = ?").param(id).update();
+
+			assertThat(dispatcher.deliver(claim)).isTrue();
+
+			assertThat(counter.count()).isEqualTo(before);
+			assertThat(attempts(jdbc, id)).isEmpty();
+		}
 	}
 
 	@Test

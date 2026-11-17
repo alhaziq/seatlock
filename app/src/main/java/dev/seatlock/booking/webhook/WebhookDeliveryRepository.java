@@ -74,11 +74,11 @@ class WebhookDeliveryRepository {
 
 	/**
 	 * Records the attempt and moves the delivery on: DELIVERED on success, else due again at {@code retryAt}, or
-	 * DEAD when {@code retryAt} is null. Does nothing when the row was re-claimed or finished since this claim (the
+	 * DEAD when {@code retryAt} is null. Does nothing, returning false, when the row was re-claimed or finished since this claim (the
 	 * lease end tells a re-claim apart even after a manual retry brings {@code attempts} back to the same number).
 	 * Must run in a transaction: the guarded update locks the row, so attempt numbers cannot collide.
 	 */
-	void record(Claim claim, Result result, Instant retryAt) {
+	boolean record(Claim claim, Result result, Instant retryAt) {
 		int updated = jdbc.sql("""
 				update webhook_deliveries
 				   set status = ?, delivered_at = ?, next_attempt_at = coalesce(?, next_attempt_at)
@@ -89,7 +89,7 @@ class WebhookDeliveryRepository {
 						utc(claim.leaseUntil()))
 				.update();
 		if (updated == 0) {
-			return;
+			return false;
 		}
 		jdbc.sql("""
 				insert into webhook_attempts
@@ -99,6 +99,7 @@ class WebhookDeliveryRepository {
 				.params(UUID.randomUUID(), claim.id(), utc(result.attemptedAt()), result.statusCode(),
 						withoutNul(result.error()), withoutNul(result.responseBody()), result.durationMs(), claim.id())
 				.update();
+		return true;
 	}
 
 	private static final String DELIVERY_COLUMNS = """

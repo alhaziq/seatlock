@@ -57,7 +57,14 @@ public class HoldService {
 			return hold;
 		}
 		catch (SeatsUnavailableException e) {
-			meters.counter("seatlock.holds", "outcome", "unavailable").increment();
+			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+				@Override
+				public void afterCompletion(int status) {
+					if (status == STATUS_ROLLED_BACK) {
+						meters.counter("seatlock.holds", "outcome", "unavailable").increment();
+					}
+				}
+			});
 			throw e;
 		}
 	}

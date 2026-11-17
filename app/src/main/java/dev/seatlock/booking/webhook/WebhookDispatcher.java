@@ -99,9 +99,10 @@ public class WebhookDispatcher {
 		Instant now = clock.instant();
 		Instant retryAt = claim.attempts() >= maxAttempts ? null
 				: now.plus(baseBackoff.multipliedBy(1L << (claim.attempts() - 1)));
-		tx.executeWithoutResult(s -> deliveries.record(claim, result, retryAt));
-		meters.counter("seatlock.webhook.attempts", "outcome",
-				result.succeeded() ? "delivered" : retryAt == null ? "dead" : "failed").increment();
+		if (Boolean.TRUE.equals(tx.execute(s -> deliveries.record(claim, result, retryAt)))) {
+			meters.counter("seatlock.webhook.attempts", "outcome",
+					result.succeeded() ? "delivered" : retryAt == null ? "dead" : "failed").increment();
+		}
 		return true;
 	}
 
