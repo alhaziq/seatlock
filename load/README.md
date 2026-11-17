@@ -28,16 +28,18 @@ Every row must show `passed = t`:
 
 | check | meaning |
 |---|---|
+| guard | the event exists, has 100 seats and at least one confirmed hold (fails for a wrong event_id) |
 | booked seats <= 100 and = seats of confirmed holds | no oversell; booked seats are exactly those of confirmed holds |
-| no seat in two confirmed holds | no seat is sold twice |
+| every confirmed hold owns a booked seat | catches a double-sell where two paid holds cover one seat |
+| no seat in two confirmed holds | tripwire; guaranteed by the single `seats.hold_id` column |
 | one succeeded payment per confirmed hold, none for others | no double charge, no charge without a booking |
-| at most one payment per (user, idempotency key) | idempotency held |
+| at most one payment per (user, idempotency key) | tripwire; guaranteed by `unique (user_id, idempotency_key)` |
 | ledger balanced per payment | debits = credits for every payment; succeeded ones have entries |
 | no PENDING payments left | settlement drained (precondition) |
 
 ## Reading the k6 summary
 
 - `holds_created` should be 100 (the seats) and `holds_conflicted` about 9,900; `pays_ok` and `pay_replays_matched` equal `holds_created`.
-- `http_req_failed` counts only statuses other than 200, 201, 202 and 409. Both thresholds (`http_req_failed rate==0`, `checks rate==1`) must pass.
+- Any unexpected status is counted in `unexpected_status` (tagged by step and status). `http_req_failed` counts only statuses other than 200, 201, 202 and 409. Both thresholds (`http_req_failed rate==0`, `checks rate==1`) must pass.
 - The `p99<60000` thresholds on `name:hold`, `name:pay` and `name:pay_replay` never fail in practice; they exist so k6 prints percentiles for each request type. Read p95/p99 from the `{ name:... }` lines.
 - Latency here is dominated by 500 VUs on a laptop sharing CPU with the whole stack; compare runs on the same machine only.
