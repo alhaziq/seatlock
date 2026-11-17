@@ -1,7 +1,7 @@
 # Seatlock — design
 
 Working name. A ticket-booking backend that stays correct under load.
-Written 2026-11-14. Status: awaiting approval.
+Written 2026-11-14. Status: milestones 1-4 built, public deploy pending.
 
 ## Why this exists
 
@@ -137,3 +137,5 @@ My calls unless marked:
 - **Name.** "Seatlock" is a placeholder.
 - **Where it is hosted and what it may cost.** A single small VM running
   Docker Compose is the default assumption.
+- **The GitHub remote.** The repository is not on GitHub yet; CI and the
+  image build start once it is pushed.

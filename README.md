@@ -1,27 +1,44 @@
 # Seatlock
 
-Seatlock is a ticket-booking backend built to stay correct under load. The goal is that 10,000 buyers can compete for 100 seats and exactly 100 of them win: zero oversold, zero double charges. Today the project covers the booking core (events, seats, time-limited holds and hold expiry) payments (idempotent pay requests, an outbox, Kafka, a settlement worker and a ledger) and webhooks (signed, retried notifications of booking outcomes), on Spring Boot, Postgres and Kafka.
+Seatlock is a ticket-booking backend built to stay correct under load. The goal is that 10,000 buyers can compete for 100 seats and exactly 100 of them win: zero oversold, zero double charges. It covers the booking core (events, seats, time-limited holds and hold expiry), payments (idempotent pay requests, an outbox, Kafka, a settlement worker and a ledger), webhooks (signed, retried notifications of booking outcomes), and the proof layer (JWT login, Redis rate limits and a seat cache, Prometheus metrics, a Docker deploy and a load test), on Spring Boot, Postgres, Kafka and Redis.
 
-## Status: milestone 3 of 4
+## Result
+
+**10,000 buyers, 100 seats: 100 holds created, 9,900 refused with a conflict, 100 payments succeeded, 0 oversold, 0 double charges.** Full numbers are in [`load/results/2026-11-local.md`](load/results/2026-11-local.md); the script is [`load/hold-rush.js`](load/hold-rush.js).
+
+| metric | value |
+|---|---|
+| requests/s | 396.5 (10,204 requests in 25.7 s) |
+| hold p95 / p99 | 2.28 s / 2.83 s (median 1.10 s) |
+| pay p95 / p99 | 2.49 s / 2.64 s |
+| pay replay p95 / p99 | 2.51 s / 2.95 s |
+| failed requests | 0 of 10,204 |
+
+These were measured locally on the author's Mac (Apple M1, 8 GiB) against `compose.prod.yaml` on a Colima VM with 4 vCPU and 4 GiB, with k6 on the same host. They were not measured on the public VM, and throughput varied between identical runs on this laptop. The deploy step will replace them.
+
+Correctness is not read from k6 counters. After the run, [`load/verify.sql`](load/verify.sql) checks the database: booked seats equal the seats of the confirmed holds and are at most 100, every confirmed hold owns at least one booked seat, each confirmed hold has one succeeded payment, every payment's ledger entries balance, and no payment is still `PENDING`. All checks passed. Two of the checks (no seat in two confirmed holds, no duplicate `(user, idempotency key)`) cannot fail on real data, because a schema constraint guarantees them; they are tripwires, not evidence. The check is also tested against bad data: three deliberate corruptions each made the matching check fail, as listed in the results file.
+
+The first run, on a 2 vCPU / 2 GiB VM, failed its thresholds: 17 of 10,000 holds returned a status that was neither 201 nor 409, and the status was not recorded. The run was repeated on a 4 vCPU / 4 GiB VM. The [attempt log](load/results/2026-11-local.md#attempt-log-every-run-against-this-stack) lists every run.
+
+## Status: milestone 4 of 4, public deploy pending
 
 1. **Booking core.** Events, seats, holds, expiry. Built.
 2. **Payments.** Idempotency keys, outbox, Kafka, a worker, a ledger. Built, against a fake payment provider.
 3. **Webhooks.** Signed delivery with retries, a delivery log and dead letters. Built.
-4. **Proof.** Load test, metrics, public deploy, measured results. Not built yet.
-
-No performance numbers are published. They will arrive with the milestone 4 load test.
+4. **Proof.** JWT login, rate limits and seat cache, metrics, Docker deploy files, load test. Built. The public deploy has not been done yet, so there is no live URL and no dashboard screenshot.
 
 ## Run it
 
-You need Java 21 and Docker with the Compose plugin. This setup is machine-local: Postgres and Kafka run in containers and the app runs on your machine. Postgres and Kafka must be up (`docker compose up -d`) before you start the app.
+You need Java 21 and Docker with the Compose plugin. This setup is machine-local: Postgres, Kafka and Redis run in containers and the app runs on your machine. They must be up (`docker compose up -d`) before you start the app. The app has no default login key: set `SEATLOCK_AUTH_JWT_SECRET` to at least 32 bytes or it refuses to start.
 
 ```
 docker compose up -d
 cd app
+export SEATLOCK_AUTH_JWT_SECRET=$(openssl rand -hex 32)
 ./mvnw spring-boot:run
 ```
 
-With no profile, one process does everything: the web API, the outbox relay, settlement and hold expiry. To run it as two processes, start each in its own terminal:
+With no profile, one process does everything: the web API, the outbox relay, settlement and hold expiry. To run it as two processes, start each in its own terminal (both need the exported secret):
 
 ```
 ./mvnw spring-boot:run -Dspring-boot.run.arguments=--spring.profiles.active=api
@@ -32,25 +49,39 @@ The `api` profile serves HTTP and runs the outbox relay. It does not expire hold
 
 Open Swagger UI at http://localhost:8080/swagger-ui.html. The OpenAPI JSON is at `/v3/api-docs`.
 
-To try it from the command line, create an event, read its seats, hold one, pay for the hold, then poll the payment. Callers identify themselves with an `X-User-Id` header holding a UUID. An event has a price in cents and a currency.
+To try it from the command line, sign up two users, log in as each, then create an event, read its seats, hold one, pay for the hold, and poll the payment. Every endpoint except signup, login and the `GET /events` reads needs an `Authorization: Bearer` header. An event has a price in cents and a currency.
 
 ```
+# the organizer
+curl -s -X POST localhost:8080/auth/signup -H 'Content-Type: application/json' \
+  -d '{"username":"organizer","password":"organizer-pass"}'
+curl -s -X POST localhost:8080/auth/login -H 'Content-Type: application/json' \
+  -d '{"username":"organizer","password":"organizer-pass"}'
+# copy "accessToken" from the response
+ORG_TOKEN=<accessToken>
+# the buyer
+curl -s -X POST localhost:8080/auth/signup -H 'Content-Type: application/json' \
+  -d '{"username":"buyer","password":"buyer-pass1"}'
+curl -s -X POST localhost:8080/auth/login -H 'Content-Type: application/json' \
+  -d '{"username":"buyer","password":"buyer-pass1"}'
+TOKEN=<accessToken>
+
 curl -s -X POST localhost:8080/events -H 'Content-Type: application/json' \
-  -H 'X-User-Id: 22222222-2222-2222-2222-222222222222' \
+  -H "Authorization: Bearer $ORG_TOKEN" \
   -d '{"name":"Launch Night","startsAt":"2027-01-01T20:00:00Z","seatCount":10,"priceCents":2500,"currency":"MYR"}'
 # copy "id" from the response
 curl -s localhost:8080/events/<event-id>/seats
 # copy the "id" of seat "1"
 curl -s -X POST localhost:8080/events/<event-id>/holds \
-  -H 'Content-Type: application/json' -H 'X-User-Id: 11111111-1111-1111-1111-111111111111' \
+  -H 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" \
   -d '{"seatIds":["<seat-id>"]}'
 # copy "id" from the response
 curl -s -X POST localhost:8080/holds/<hold-id>/pay \
-  -H 'X-User-Id: 11111111-1111-1111-1111-111111111111' -H 'Idempotency-Key: order-1'
+  -H "Authorization: Bearer $TOKEN" -H 'Idempotency-Key: order-1'
 # 202 with a PENDING payment; copy "id" from the response
-curl -s localhost:8080/payments/<payment-id>
+curl -s localhost:8080/payments/<payment-id> -H "Authorization: Bearer $TOKEN"
 # repeat until "status" is SUCCEEDED
-curl -s localhost:8080/holds/<hold-id>
+curl -s localhost:8080/holds/<hold-id> -H "Authorization: Bearer $TOKEN"
 # "status" is now CONFIRMED
 ```
 
@@ -60,15 +91,17 @@ To see a webhook arrive, run a small receiver on your machine that prints the he
 SEATLOCK_WEBHOOKS_ALLOW_HTTP=true SEATLOCK_WEBHOOKS_ALLOW_PRIVATE_ADDRESSES=true ./mvnw spring-boot:run
 ```
 
-The event's organizer is the `X-User-Id` that created it (`2222...` above). Register the receiver for that user before paying, and save the `secret` from the response; it is shown only here, and every `PUT` replaces it:
+The event's organizer is the user who created it (`organizer` above). Register the receiver as that user before paying, and save the `secret` from the response; it is shown only here, and every `PUT` replaces it:
 
 ```
 curl -s -X PUT localhost:8080/webhook-endpoint \
-  -H 'Content-Type: application/json' -H 'X-User-Id: 22222222-2222-2222-2222-222222222222' \
+  -H 'Content-Type: application/json' -H "Authorization: Bearer $ORG_TOKEN" \
   -d '{"url":"http://localhost:9000/hook"}'
 ```
 
 Then pay for a hold on that event as above. The receiver gets a signed `booking.confirmed` within a few seconds.
+
+Tokens last one hour; log in again after that. Holds and payments are visible only to the user who made them. Another user gets a 404.
 
 A hold lasts five minutes. Holding the same seat again returns a conflict. Paying again with the same `Idempotency-Key` on the same hold returns the same payment. Use a new key for each new hold: a key is tied to the user and the hold it was first used on.
 
@@ -115,6 +148,41 @@ static boolean verify(String secret, String signatureHeader, String rawBody) thr
 
 **URL policy.** By default a URL must be https and must resolve only to public addresses. Loopback, any-local, link-local (including `169.254.169.254`), site-local, multicast and IPv6 unique-local addresses are refused. The check runs when the endpoint is registered and again before every send. [`WebhookUrlPolicyTest`](app/src/test/java/dev/seatlock/booking/webhook/WebhookUrlPolicyTest.java) covers the rules, [`WebhookEndpointApiTest`](app/src/test/java/dev/seatlock/booking/webhook/WebhookEndpointApiTest.java) the check at registration, and `blockedAddressIsNotContacted` in `WebhookDispatcherTest` the check before sending. `SEATLOCK_WEBHOOKS_ALLOW_HTTP` and `SEATLOCK_WEBHOOKS_ALLOW_PRIVATE_ADDRESSES` switch the two rules off for local runs.
 
+## Login
+
+`POST /auth/signup` takes a username (3 to 32 characters of `a-z`, `0-9`, `_`) and a password (8 to 72 bytes) and stores a BCrypt hash. `POST /auth/login` returns an HS256 JWT in `accessToken` that lasts one hour (`seatlock.auth.token-ttl`). The token's `sub` is the user id, and every controller reads the caller from it. [`AuthApiTest`](app/src/test/java/dev/seatlock/booking/auth/AuthApiTest.java) covers signup, duplicate names, validation, and login with a wrong password or an unknown user (both give the same 401). [`SecurityTest`](app/src/test/java/dev/seatlock/booking/auth/SecurityTest.java) covers a missing, garbage, expired, wrongly signed and `alg:none` token (all 401), the public routes, a startup failure when the secret is missing or too short, and that holds and payments are visible only to their owner.
+
+What it is: enough to tie each hold, payment and webhook endpoint to one user. What it is not: there are no refresh tokens, no logout or revocation (a token works until it expires), no roles, no password reset and no email check. Anyone can sign up and create events, and signup is not rate limited. One secret signs and checks tokens, so changing it logs everyone out.
+
+## Rate limits and caching
+
+Redis does two jobs here. It is never the source of truth for who holds a seat.
+
+**Rate limits.** `POST /events/{id}/holds` and `POST /holds/{id}/pay` allow 10 requests per user per 10 seconds. `POST /auth/login` allows 10 per username per 60 seconds, counted even when the password is right. Over the limit the response is a 429 with `Retry-After`. [`RateLimitTest`](app/src/test/java/dev/seatlock/booking/ratelimit/RateLimitTest.java) checks the eleventh hold and the eleventh login, and that a refused hold changes nothing. The counters are fixed windows, so a client can send up to twice the limit across a window edge (see the known limits).
+
+**Fail open.** If Redis is down, the limiter logs a warning and lets the request through, and the seat list is read from Postgres. The Redis timeouts are 500 ms, so a dead Redis costs about a second per request. [`RedisUnavailableTest`](app/src/test/java/dev/seatlock/booking/ratelimit/RedisUnavailableTest.java) runs holds, payments and the seat list against a closed Redis port. The choice is deliberate: a Redis outage should not stop sales, and the limits protect the service, not the data.
+
+**Seat cache.** `GET /events/{id}/seats` is cached in Redis for 1 second (`seatlock.seat-cache.ttl`). A read can therefore show a seat as `AVAILABLE` for up to a second after someone holds it. This cannot oversell, because nothing reads the cache when taking a seat: `POST /events/{id}/holds` locks the rows in Postgres as described below, and a hold on a seat the cache wrongly showed as free fails with a conflict. [`SeatCacheTest`](app/src/test/java/dev/seatlock/booking/event/SeatCacheTest.java) holds a seat behind the cache's back, sees the stale `AVAILABLE`, then sees `HELD` within the TTL.
+
+## Metrics
+
+Each process serves Prometheus metrics on port 8081, along with `/actuator/health`; nothing else is exposed there. The compose network lets Prometheus scrape it, and the port is never published. [`MetricsTest`](app/src/test/java/dev/seatlock/booking/metrics/MetricsTest.java) covers each custom meter and checks the management port exposes only health and Prometheus without a token.
+
+| meter | meaning |
+|---|---|
+| `seatlock_holds_total{outcome}` | holds created, or refused because a seat was unavailable |
+| `seatlock_payments_settled_total{status}` | payments settled, by final status |
+| `seatlock_webhook_attempts_total{outcome}` | webhook delivery attempts, by outcome |
+| `seatlock_outbox_unpublished` | outbox rows not yet sent to Kafka (read from the database on each scrape) |
+| `seatlock_webhook_pending` | webhook deliveries still `PENDING` (read from the database on each scrape) |
+| `http_server_requests_seconds` | Spring's request timer, used for hold and pay p95 |
+
+The Grafana dashboard ([`deploy/grafana/dashboards/seatlock.json`](deploy/grafana/dashboards/seatlock.json)) has seven panels: holds per second by outcome, p95 latency of hold and pay, payments settled by status, outbox backlog, webhook attempts by outcome, and pending webhooks. A screenshot is not here yet: the author adds it after the first public deploy.
+
+## Deploy
+
+`compose.prod.yaml` runs Postgres, Kafka, Redis, the api, the worker, Prometheus, Grafana and Caddy on one VM. Only the api is publicly routed (Caddy sends `/` to it, and `/grafana/*` to Grafana). The worker also serves HTTP internally but is not routed, and metrics port 8081 is never published. Steps, VM size and backups are in [`docs/deploy.md`](docs/deploy.md). The public deploy has not been done yet.
+
 ## How overselling is prevented
 
 A hold request runs in one database transaction. First it runs `select ... for update` on the requested seats that are still `AVAILABLE`, ordered by id. Postgres locks those rows, so a second request for the same seat waits. When the first transaction commits, the waiting request re-checks the row, sees it is no longer `AVAILABLE`, and drops it from its result. The service then compares the number of locked rows with the number of seats asked for. If they differ, it fails the whole request with a conflict and nothing is written. Otherwise it inserts the hold and marks the seats `HELD` in the same transaction. The code locks rows in id order, so every transaction takes its locks in the same order. Expiry frees a hold and its seats in a single statement.
@@ -137,6 +205,9 @@ Retry behaviour is set in `SettlementKafkaConfig` and tested in [`SettlementRetr
 
 - The payment provider is a fake. There is no real provider integration.
 - There are no refunds.
+- The rate limiter uses fixed windows, so a client can send up to twice the limit across a window edge. It is marked with a `shortcut:` comment in `RateLimiter`.
+- Login tokens cannot be revoked and there are no refresh tokens, and signup is not rate limited.
+- The load numbers come from a laptop running k6 and the whole stack together, not from the public VM.
 - Settlement holds the payment row lock during the provider call. This is simple and correct, but a slow provider ties up a database connection.
 - The outbox keeps per-key order only within one relay batch. Each key carries one message today, so this does not matter yet.
 - An outbox row that can never be sent blocks the rows behind it.
@@ -147,7 +218,7 @@ Retry behaviour is set in `SettlementKafkaConfig` and tested in [`SettlementRetr
 - Webhook secrets are stored in plain text.
 - The dead-letter table is a status (`DEAD`) on `webhook_deliveries`, not a separate table.
 
-Every limit above is marked with a `shortcut:` comment in the code that says when to upgrade it, except the fake provider, the missing refunds and the dead-letter status, which is a design choice.
+Every limit above is marked with a `shortcut:` comment in the code that says when to upgrade it, except the fake provider, the missing refunds, the dead-letter status (a design choice), the token and signup limits and the laptop numbers.
 
 ## Design
 
